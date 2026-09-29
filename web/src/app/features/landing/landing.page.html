@@ -1,0 +1,164 @@
+<section class="relative overflow-hidden border-b">
+  <div
+    class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60rem_30rem_at_50%_-10%,color-mix(in_oklch,var(--primary)_18%,transparent),transparent)]"
+    aria-hidden="true"
+  ></div>
+  <div
+    class="pointer-events-none absolute inset-0 -z-10 [background-image:linear-gradient(var(--border)_1px,transparent_1px),linear-gradient(90deg,var(--border)_1px,transparent_1px)] [background-size:48px_48px] opacity-40 [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]"
+    aria-hidden="true"
+  ></div>
+
+  <div class="mx-auto max-w-7xl px-4 pt-16 pb-14 sm:px-6 sm:pt-24 sm:pb-20">
+    <div class="mx-auto max-w-3xl text-center">
+      <a routerLink="/pipeline" class="mb-6 inline-flex">
+        <z-badge zType="outline" class="bg-background/60 gap-1.5 px-3 py-1 backdrop-blur">
+          <ng-icon name="lucideZap" class="text-primary size-3.5" aria-hidden="true" />
+          New: legacy PATDOC → JSON conversion
+          <ng-icon name="lucideArrowRight" class="size-3" aria-hidden="true" />
+        </z-badge>
+      </a>
+      <h1 class="text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
+        Patent &amp; trademark data,
+        <span class="text-primary">open by default.</span>
+      </h1>
+      <p class="text-muted-foreground mx-auto mt-5 max-w-2xl text-base text-pretty sm:text-lg">
+        OpenPTO modernizes public IP records: a fast search portal, a documented REST API with free keys, a pipeline that
+        turns decades-old XML into JSON, and an itemized fee calculator.
+      </p>
+
+      <form role="search" class="mx-auto mt-8 flex max-w-xl flex-col gap-2 sm:flex-row" (submit)="search($event)">
+        <label for="hero-search" class="sr-only">Search patents</label>
+        <div class="relative flex-1">
+          <ng-icon name="lucideSearch" class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" aria-hidden="true" />
+          <input
+            id="hero-search"
+            z-input
+            type="search"
+            class="h-10 pl-9"
+            placeholder="Search patents — e.g. solid-state battery"
+            [value]="query()"
+            (input)="query.set($any($event.target).value)"
+          />
+        </div>
+        <button type="submit" z-button zSize="lg" class="h-10 px-4">Search</button>
+      </form>
+      <div class="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
+        <a z-button zType="link" routerLink="/fees">Estimate filing fees</a>
+        <span class="text-muted-foreground" aria-hidden="true">·</span>
+        <a z-button zType="link" routerLink="/developers">Get an API key</a>
+      </div>
+    </div>
+
+    <!-- live stats -->
+    <dl class="mx-auto mt-14 grid max-w-4xl grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-4" aria-live="polite">
+      @if (stats.isLoading()) {
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="bg-card space-y-2 p-5">
+            <z-skeleton class="h-3 w-20" />
+            <z-skeleton class="h-7 w-24" />
+          </div>
+        }
+      } @else if (stats.hasValue()) {
+        @let s = stats.value();
+        <div class="bg-card p-5">
+          <dt class="text-muted-foreground text-xs font-medium uppercase">Patents</dt>
+          <dd class="tabular mt-1 text-2xl font-semibold">{{ s.patents | number }}</dd>
+        </div>
+        <div class="bg-card p-5">
+          <dt class="text-muted-foreground text-xs font-medium uppercase">Trademarks</dt>
+          <dd class="tabular mt-1 text-2xl font-semibold">{{ s.trademarks | number }}</dd>
+        </div>
+        <div class="bg-card p-5">
+          <dt class="text-muted-foreground text-xs font-medium uppercase">Years covered</dt>
+          <dd class="tabular mt-1 text-2xl font-semibold">{{ s.patentsByYear.length }}</dd>
+        </div>
+        <div class="bg-card p-5">
+          <dt class="text-muted-foreground text-xs font-medium uppercase">Last ingest</dt>
+          <dd class="mt-1 text-base font-semibold">{{ s.lastIngestAt ? (s.lastIngestAt | date: 'MMM d, y, h:mm a') : 'Seed data only' }}</dd>
+        </div>
+      } @else {
+        <div class="bg-card text-muted-foreground col-span-full p-5 text-center text-sm">
+          Live statistics are unavailable right now — the API gateway may be starting up.
+          <button type="button" z-button zType="link" zSize="sm" (click)="stats.reload()">Retry</button>
+        </div>
+      }
+    </dl>
+  </div>
+</section>
+
+<!-- products -->
+<section class="mx-auto max-w-7xl px-4 py-16 sm:px-6" aria-labelledby="products-heading">
+  <div class="mb-8 max-w-2xl">
+    <h2 id="products-heading" class="text-2xl font-semibold tracking-tight">Three tools, one open platform</h2>
+    <p class="text-muted-foreground mt-2">Everything is free with an account. Anonymous access works too, with lower limits.</p>
+  </div>
+  <div class="grid gap-4 md:grid-cols-3">
+    @for (p of products; track p.title) {
+      <z-card class="group relative transition-shadow hover:shadow-md">
+        <z-card-header>
+          <span class="bg-primary/10 text-primary mb-2 grid size-10 place-items-center rounded-lg">
+            <ng-icon [name]="p.icon" class="size-5" aria-hidden="true" />
+          </span>
+          <z-card-title class="text-lg">{{ p.title }}</z-card-title>
+          <z-card-description>{{ p.body }}</z-card-description>
+        </z-card-header>
+        <z-card-footer>
+          <a [routerLink]="p.link" class="text-primary inline-flex items-center gap-1 text-sm font-medium after:absolute after:inset-0 hover:underline">
+            {{ p.cta }} <ng-icon name="lucideArrowRight" class="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+          </a>
+        </z-card-footer>
+      </z-card>
+    }
+  </div>
+</section>
+
+<!-- charts + code -->
+<section class="bg-muted/30 border-y">
+  <div class="mx-auto grid max-w-7xl gap-6 px-4 py-16 sm:px-6 lg:grid-cols-2">
+    <z-card>
+      <z-card-header>
+        <z-card-title>Patents by grant year</z-card-title>
+        <z-card-description>Most recent 15 years in the open dataset</z-card-description>
+      </z-card-header>
+      <z-card-content class="space-y-6">
+        @if (stats.isLoading()) {
+          <z-skeleton class="h-44 w-full" />
+        } @else if (byYear().length) {
+          <app-bar-chart [data]="byYear()" ariaLabel="Patents by grant year" unit="patents" />
+        } @else {
+          <p class="text-muted-foreground py-10 text-center text-sm">No statistics available yet.</p>
+        }
+        @if (tmStatuses().length) {
+          <div>
+            <h3 class="mb-2 text-sm font-medium">Trademarks by status</h3>
+            <ul class="space-y-2">
+              @for (t of tmStatuses(); track t.label) {
+                <li class="grid grid-cols-[8rem_1fr_3rem] items-center gap-3 text-sm">
+                  <span class="text-muted-foreground truncate">{{ t.label }}</span>
+                  <span class="bg-muted h-2 overflow-hidden rounded-full" aria-hidden="true">
+                    <span class="bg-primary/80 block h-full rounded-full" [style.width.%]="t.pct"></span>
+                  </span>
+                  <span class="tabular text-right">{{ t.pct }}%</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </z-card-content>
+    </z-card>
+
+    <div class="flex flex-col gap-4">
+      <div>
+        <h2 class="text-2xl font-semibold tracking-tight">Built for developers</h2>
+        <p class="text-muted-foreground mt-2">
+          A plain REST API with RFC 7807 errors, request IDs, pagination and rate-limit headers. Bring your own language.
+        </p>
+      </div>
+      <app-code-tabs [samples]="snippets" idPrefix="landing" ariaLabel="API examples" />
+      <div class="flex flex-wrap gap-2">
+        <a z-button routerLink="/developers">Create a free API key</a>
+        <a z-button zType="outline" href="/swagger-ui.html" target="_blank" rel="noopener">API reference</a>
+      </div>
+    </div>
+  </div>
+</section>

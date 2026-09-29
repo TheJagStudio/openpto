@@ -1,0 +1,186 @@
+<div class="grid gap-6 lg:grid-cols-[22rem_1fr]">
+  <!-- Request form -->
+  <form [formGroup]="form" class="space-y-5" aria-label="Patent filing fee request" (submit)="$event.preventDefault()">
+    <z-card>
+      <z-card-content class="space-y-4 pt-4">
+        <div class="space-y-1.5">
+          <span class="text-sm font-medium">Application type</span>
+          <z-select formControlName="applicationType" zAriaLabel="Application type">
+            @for (t of applicationTypes; track t) {
+              <z-select-item [zValue]="t">{{ humanize(t) }}</z-select-item>
+            }
+          </z-select>
+        </div>
+
+        <fieldset class="space-y-2">
+          <legend class="text-sm font-medium">Entity size</legend>
+          <z-radio-group formControlName="entitySize" name="pf-entity" class="grid-cols-3">
+            @for (s of entitySizes; track s) {
+              <div class="flex items-center gap-2"><z-radio [value]="s" [zId]="'pf-entity-' + s" /><label [for]="'pf-entity-' + s" class="text-sm">{{ humanize(s) }}</label></div>
+            }
+          </z-radio-group>
+          <p class="text-muted-foreground text-xs">Small = 40% and micro = 20% of large-entity rates for most fees. Micro requires certification.</p>
+        </fieldset>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1.5">
+            <label for="pf-total" class="text-sm font-medium">Total claims</label>
+            <input
+              id="pf-total"
+              z-input
+              type="number"
+              inputmode="numeric"
+              min="0"
+              max="500"
+              formControlName="totalClaims"
+              [attr.aria-invalid]="!!fieldError('totalClaims')"
+              aria-describedby="pf-total-err"
+            />
+            <p id="pf-total-err" class="text-destructive text-xs" aria-live="polite">{{ fieldError('totalClaims') }}</p>
+          </div>
+          <div class="space-y-1.5">
+            <label for="pf-indep" class="text-sm font-medium">Independent</label>
+            <input
+              id="pf-indep"
+              z-input
+              type="number"
+              inputmode="numeric"
+              min="0"
+              max="100"
+              formControlName="independentClaims"
+              [attr.aria-invalid]="!!fieldError('independentClaims')"
+              aria-describedby="pf-indep-err"
+            />
+            <p id="pf-indep-err" class="text-destructive text-xs" aria-live="polite">{{ fieldError('independentClaims') }}</p>
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="pf-sheets" class="text-sm font-medium">Specification + drawing sheets</label>
+          <input
+            id="pf-sheets"
+            z-input
+            type="number"
+            inputmode="numeric"
+            min="0"
+            max="10000"
+            formControlName="specificationSheets"
+            [attr.aria-invalid]="!!fieldError('specificationSheets')"
+            aria-describedby="pf-sheets-hint"
+          />
+          <p id="pf-sheets-hint" class="text-muted-foreground text-xs">
+            @if (fieldError('specificationSheets'); as e) {
+              <span class="text-destructive">{{ e }}</span>
+            } @else {
+              Size fee applies per 50 sheets over 100.
+            }
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1.5">
+            <span class="text-sm font-medium">Extension</span>
+            <z-select formControlName="extensionMonths" zAriaLabel="Extension of time">
+              @for (m of extensionOptions; track m) {
+                <z-select-item [zValue]="'' + m">{{ m === 0 ? 'None' : m + (m === 1 ? ' month' : ' months') }}</z-select-item>
+              }
+            </z-select>
+          </div>
+          <div class="space-y-1.5">
+            <span class="text-sm font-medium">RCE</span>
+            <z-select formControlName="continuedExamination" zAriaLabel="Request for continued examination">
+              @for (c of continuedExaminations; track c) {
+                <z-select-item [zValue]="c">{{ humanize(c) }}</z-select-item>
+              }
+            </z-select>
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="pf-date" class="text-sm font-medium">Filing date <span class="text-muted-foreground font-normal">(optional)</span></label>
+          <input id="pf-date" z-input type="date" formControlName="filingDate" aria-describedby="pf-date-hint" />
+          <p id="pf-date-hint" class="text-muted-foreground text-xs">Picks the fee schedule in effect on that date (default: today).</p>
+        </div>
+
+        <div class="flex flex-col gap-3 border-t pt-4">
+          <z-switch formControlName="multipleDependentClaims" zId="pf-mdc">Multiple dependent claims</z-switch>
+          <z-switch formControlName="filedElectronically" zId="pf-efs">Filed electronically</z-switch>
+          <z-switch formControlName="lateFilingSurcharge" zId="pf-late">Late filing surcharge</z-switch>
+          <z-switch formControlName="prioritizedExamination" zId="pf-track1">Track One prioritized examination</z-switch>
+          @if (!trackOneAllowed()) {
+            <p class="text-muted-foreground text-xs">Track One is not available for {{ humanize(form.controls.applicationType.value) }} applications.</p>
+          }
+          @if (trackOneOverLimit()) {
+            <p class="text-xs text-amber-700 dark:text-amber-300" role="status">Track One allows at most 4 independent and 30 total claims.</p>
+          }
+        </div>
+      </z-card-content>
+    </z-card>
+  </form>
+
+  <!-- Result -->
+  <section class="min-w-0 space-y-5" aria-labelledby="pf-result-h" aria-live="polite" [attr.aria-busy]="loading()">
+    <h2 id="pf-result-h" class="sr-only">Fee estimate</h2>
+
+    <!-- Entity comparison -->
+    <div class="grid grid-cols-3 gap-2 sm:gap-3" role="group" aria-label="Entity size comparison">
+      @for (s of entitySizes; track s) {
+        <button
+          type="button"
+          class="focus-visible:ring-ring/50 rounded-xl border p-3 text-left transition-colors outline-none focus-visible:ring-2 sm:p-4"
+          [class]="entity() === s ? 'border-primary bg-primary/5' : 'bg-card hover:bg-muted/60'"
+          [attr.aria-pressed]="entity() === s"
+          [attr.data-testid]="'compare-' + s"
+          (click)="selectEntity(s)"
+        >
+          <div class="text-muted-foreground text-xs font-medium">{{ humanize(s) }} entity</div>
+          @if (comparison(); as c) {
+            <div class="tabular mt-1 text-lg font-semibold sm:text-2xl">{{ c[s].total | currency: 'USD' : 'symbol' : '1.0-0' }}</div>
+            <div class="text-muted-foreground text-xs">
+              @if (s !== 'LARGE' && savings(s) !== null) {
+                saves {{ savings(s) }}%
+              } @else {
+                baseline
+              }
+            </div>
+          } @else if (loading()) {
+            <z-skeleton class="mt-2 h-7 w-20" />
+          } @else {
+            <div class="text-muted-foreground mt-1 text-lg">—</div>
+          }
+        </button>
+      }
+    </div>
+
+    @if (problem(); as p) {
+      <z-alert zType="destructive" zIcon="lucideTriangleAlert" zRole="alert" [zTitle]="p.title ?? 'Could not calculate fees'" [zDescription]="p.detail ?? ''" />
+    }
+
+    @if (form.invalid) {
+      <z-alert zIcon="lucideCalculator" zTitle="Fix the highlighted fields" zDescription="The estimate updates automatically once the request is valid." />
+    }
+
+    @if (quote(); as q) {
+      <z-card [class.opacity-60]="loading()">
+        <z-card-header>
+          <z-card-title>Itemized estimate</z-card-title>
+          <z-card-description>Recalculated live by the fee service as you type.</z-card-description>
+          <div z-card-action class="print:hidden">
+            <app-save-quote-button kind="PATENT_FILING" [request]="request()" [disabled]="loading()" />
+          </div>
+        </z-card-header>
+        <z-card-content>
+          <app-quote-breakdown [quote]="q" />
+        </z-card-content>
+      </z-card>
+    } @else if (loading()) {
+      <z-card>
+        <z-card-content class="space-y-2 pt-4">
+          @for (i of [1, 2, 3, 4, 5]; track i) {
+            <z-skeleton class="h-8 w-full" />
+          }
+        </z-card-content>
+      </z-card>
+    }
+  </section>
+</div>

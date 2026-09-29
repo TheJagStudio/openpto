@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5433/openpto_test}
+    username: ${DB_USER:openpto}
+    password: ${DB_PASSWORD:openpto}
+    hikari:
+      maximum-pool-size: 4
+  flyway:
+    schemas: fees
+    default-schema: fees
+
+server:
+  port: 0
+
+logging:
+  level:
+    org.springframework: WARN
+    org.hibernate: WARN

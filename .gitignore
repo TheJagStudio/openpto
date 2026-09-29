@@ -1,0 +1,15 @@
+build/
+.gradle/
+out/
+*.class
+*.log
+.idea/
+*.iml
+.vscode/
+node_modules/
+dist/
+.angular/
+data/
+!**/src/**/data/
+.env
+*.local.yml

@@ -1,0 +1,4 @@
+rootProject.name = 'ingest-service'
+
+// Plain Java 21 library (no Spring) that is also deployable as an AWS Lambda function.
+include 'transform-lambda'

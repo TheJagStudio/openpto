@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE trademark-applications-daily SYSTEM "trademark-applications-daily-v2-0.dtd">
+<trademark-applications-daily>
+<version>
+<version-no>2.0</version-no>
+<version-date>20240102</version-date>
+</version>
+<creation-datetime>202401020415</creation-datetime>
+<application-information>
+<file-segments>
+<file-segment>TMRS</file-segment>
+<action-keys>
+<action-key>AA</action-key>
+<case-file>
+<serial-number>97123456</serial-number>
+<registration-number>7123456</registration-number>
+<transaction-date>20240101</transaction-date>
+<case-file-header>
+<filing-date>20211115</filing-date>
+<registration-date>20230704</registration-date>
+<status-code>700</status-code>
+<status-date>20230704</status-date>
+<mark-identification>BLUE HERON ROASTERS</mark-identification>
+<mark-drawing-code>4000</mark-drawing-code>
+<published-for-opposition-date>20230418</published-for-opposition-date>
+<attorney-name>Priya Raman</attorney-name>
+<trademark-in>T</trademark-in>
+<use-application-currently-in>T</use-application-currently-in>
+<intent-to-use-current-in>F</intent-to-use-current-in>
+</case-file-header>
+<case-file-statements>
+<case-file-statement>
+<type-code>GS0301</type-code>
+<text>Coffee; coffee beans; ground coffee; tea</text>
+</case-file-statement>
+<case-file-statement>
+<type-code>GS0431</type-code>
+<text>Cafe and coffee house services</text>
+</case-file-statement>
+<case-file-statement>
+<type-code>D10000</type-code>
+<text>No claim is made to the exclusive right to use "ROASTERS" apart from the mark as shown.</text>
+</case-file-statement>
+</case-file-statements>
+<case-file-event-statements>
+<case-file-event-statement>
+<code>NWAP</code>
+<type>I</type>
+<description-text>NEW APPLICATION ENTERED</description-text>
+<date>20211118</date>
+<number>1</number>
+</case-file-event-statement>
+<case-file-event-statement>
+<code>NWOS</code>
+<type>I</type>
+<description-text>NEW APPLICATION OFFICE SUPPLIED DATA ENTERED</description-text>
+<date>20211119</date>
+<number>2</number>
+</case-file-event-statement>
+<case-file-event-statement>
+<code>NPUB</code>
+<type>O</type>
+<description-text>OFFICIAL GAZETTE PUBLICATION CONFIRMATION E-MAILED</description-text>
+<date>20230418</date>
+<number>3</number>
+</case-file-event-statement>
+<case-file-event-statement>
+<code>R.PR</code>
+<type>A</type>
+<description-text>REGISTERED-PRINCIPAL REGISTER</description-text>
+<date>20230704</date>
+<number>4</number>
+</case-file-event-statement>
+</case-file-event-statements>
+<classifications>
+<classification>
+<international-code-total-no>1</international-code-total-no>
+<us-code-total-no>1</us-code-total-no>
+<international-code>030</international-code>
+<us-code>046</us-code>
+<status-code>6</status-code>
+<status-date>20211119</status-date>
+<first-use-anywhere-date>20190301</first-use-anywhere-date>
+<first-use-in-commerce-date>20190301</first-use-in-commerce-date>
+<primary-code>030</primary-code>
+</classification>
+<classification>
+<international-code-total-no>1</international-code-total-no>
+<international-code>043</international-code>
+<us-code>100</us-code>
+<status-code>6</status-code>
+<primary-code>043</primary-code>
+</classification>
+</classifications>
+<case-file-owners>
+<case-file-owner>
+<entry-number>01</entry-number>
+<party-type>10</party-type>
+<legal-entity-type-code>16</legal-entity-type-code>
+<party-name>Blue Heron Coffee Co.</party-name>
+<address-1>112 Waterfront Way</address-1>
+<city>Portland</city>
+<state>OR</state>
+<country>US</country>
+<postcode>97209</postcode>
+</case-file-owner>
+<case-file-owner>
+<entry-number>01</entry-number>
+<party-type>30</party-type>
+<legal-entity-type-code>16</legal-entity-type-code>
+<party-name>Blue Heron Coffee Company, LLC</party-name>
+<address-1>112 Waterfront Way</address-1>
+<address-2>Suite 4</address-2>
+<city>Portland</city>
+<state>OR</state>
+<country>US</country>
+<postcode>97209</postcode>
+</case-file-owner>
+</case-file-owners>
+</case-file>
+<case-file>
+<serial-number>98234567</serial-number>
+<registration-number>0000000</registration-number>
+<transaction-date>20240101</transaction-date>
+<case-file-header>
+<filing-date>20231020</filing-date>
+<status-code>630</status-code>
+<status-date>20231024</status-date>
+<mark-identification>QUANTUMLEAF</mark-identification>
+<mark-drawing-code>4000</mark-drawing-code>
+<attorney-name>Samuel Ortiz</attorney-name>
+<intent-to-use-current-in>T</intent-to-use-current-in>
+</case-file-header>
+<case-file-statements>
+<case-file-statement>
+<type-code>GS0091</type-code>
+<text>Downloadable software for monitoring indoor plant health</text>
+</case-file-statement>
+</case-file-statements>
+<case-file-event-statements>
+<case-file-event-statement>
+<code>NWAP</code>
+<type>I</type>
+<description-text>NEW APPLICATION ENTERED</description-text>
+<date>20231024</date>
+<number>1</number>
+</case-file-event-statement>
+</case-file-event-statements>
+<classifications>
+<classification>
+<international-code>009</international-code>
+<primary-code>009</primary-code>
+</classification>
+</classifications>
+<case-file-owners>
+<case-file-owner>
+<entry-number>01</entry-number>
+<party-type>10</party-type>
+<party-name>Quantumleaf Labs Inc.</party-name>
+<address-1>77 Greenhouse Row</address-1>
+<city>Durham</city>
+<state>NC</state>
+<country>US</country>
+<postcode>27701</postcode>
+</case-file-owner>
+</case-file-owners>
+</case-file>
+<case-file>
+<serial-number>90876543</serial-number>
+<registration-number>0000000</registration-number>
+<transaction-date>20240101</transaction-date>
+<case-file-header>
+<filing-date>20210802</filing-date>
+<status-code>602</status-code>
+<status-date>20231212</status-date>
+<mark-identification>STORMCHASER</mark-identification>
+<mark-drawing-code>3000</mark-drawing-code>
+<abandonment-date>20231212</abandonment-date>
+<intent-to-use-current-in>T</intent-to-use-current-in>
+</case-file-header>
+<case-file-statements>
+<case-file-statement>
+<type-code>GS0251</type-code>
+<text>Rain jackets; waterproof trousers; hats</text>
+</case-file-statement>
+</case-file-statements>
+<case-file-event-statements>
+<case-file-event-statement>
+<code>NWAP</code>
+<type>I</type>
+<description-text>NEW APPLICATION ENTERED</description-text>
+<date>20210805</date>
+<number>1</number>
+</case-file-event-statement>
+<case-file-event-statement>
+<code>ABN6</code>
+<type>A</type>
+<description-text>ABANDONMENT - NO USE STATEMENT FILED</description-text>
+<date>20231212</date>
+<number>2</number>
+</case-file-event-statement>
+</case-file-event-statements>
+<classifications>
+<classification>
+<international-code>025</international-code>
+<primary-code>025</primary-code>
+</classification>
+</classifications>
+<case-file-owners>
+<case-file-owner>
+<entry-number>01</entry-number>
+<party-type>10</party-type>
+<party-name>Stormchaser Outfitters LLC</party-name>
+<city>Denver</city>
+<state>CO</state>
+<country>US</country>
+</case-file-owner>
+</case-file-owners>
+</case-file>
+<case-file>
+<serial-number>79345678</serial-number>
+<registration-number>6789012</registration-number>
+<transaction-date>20240101</transaction-date>
+<case-file-header>
+<filing-date>20220301</filing-date>
+<registration-date>20230110</registration-date>
+<status-code>700</status-code>
+<status-date>20230110</status-date>
+<mark-identification>NORDLYS</mark-identification>
+<mark-drawing-code>5000</mark-drawing-code>
+<filing-basis-current-66a-in>T</filing-basis-current-66a-in>
+</case-file-header>
+<case-file-statements>
+<case-file-statement>
+<type-code>GS0111</type-code>
+<text>Lighting apparatus, namely, LED lamps and lanterns</text>
+</case-file-statement>
+</case-file-statements>
+<case-file-event-statements>
+<case-file-event-statement>
+<code>REG</code>
+<type>A</type>
+<description-text>REGISTERED - PRINCIPAL REGISTER</description-text>
+<date>20230110</date>
+<number>1</number>
+</case-file-event-statement>
+</case-file-event-statements>
+<classifications>
+<classification>
+<international-code>011</international-code>
+<primary-code>011</primary-code>
+</classification>
+</classifications>
+<case-file-owners>
+<case-file-owner>
+<entry-number>01</entry-number>
+<party-type>30</party-type>
+<party-name>Nordlys Belysning AS</party-name>
+<address-1>Strandgaten 9</address-1>
+<city>Tromso</city>
+<country>NO</country>
+</case-file-owner>
+</case-file-owners>
+</case-file>
+<case-file>
+<serial-number>88765432</serial-number>
+<registration-number>6012345</registration-number>
+<transaction-date>20240101</transaction-date>
+<case-file-header>
+<filing-date>20200115</filing-date>
+<registration-date>20200630</registration-date>
+<status-code>710</status-code>
+<status-date>20231201</status-date>
+<mark-identification>CHIME-TONE</mark-identification>
+<mark-drawing-code>6000</mark-drawing-code>
+<cancellation-date>20231201</cancellation-date>
+<use-application-currently-in>T</use-application-currently-in>
+</case-file-header>
+<case-file-statements>
+<case-file-statement>
+<type-code>GS0381</type-code>
+<text>Telecommunication services, namely, transmission of notification sounds</text>
+</case-file-statement>
+</case-file-statements>
+<case-file-event-statements>
+<case-file-event-statement>
+<code>C8..</code>
+<type>A</type>
+<description-text>CANCELLED SEC. 8 (6-YR)</description-text>
+<date>20231201</date>
+<number>1</number>
+</case-file-event-statement>
+</case-file-event-statements>
+<classifications>
+<classification>
+<international-code>038</international-code>
+<primary-code>038</primary-code>
+</classification>
+</classifications>
+<case-file-owners>
+<case-file-owner>
+<entry-number>01</entry-number>
+<party-type>30</party-type>
+<party-name>Chime Audio Inc.</party-name>
+<city>Nashville</city>
+<state>TN</state>
+<country>US</country>
+</case-file-owner>
+</case-file-owners>
+</case-file>
+</action-keys>
+</file-segments>
+</application-information>
+</trademark-applications-daily>

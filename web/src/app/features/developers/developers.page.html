@@ -1,0 +1,243 @@
+<div class="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6">
+  <app-page-header
+    eyebrow="Developers"
+    heading="Developer portal"
+    description="Create API keys, watch your usage and integrate the OpenPTO REST API. Send your key in the X-API-Key header."
+  >
+    <a actions z-button zType="outline" [href]="swaggerUrl" target="_blank" rel="noopener">
+      <ng-icon name="lucideBookOpen" aria-hidden="true" /> API reference
+    </a>
+  </app-page-header>
+
+  @if (!auth.isAuthenticated()) {
+    <z-card class="bg-primary/5 border-primary/20">
+      <z-card-content class="flex flex-col items-start gap-4 pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex gap-3">
+          <ng-icon name="lucideKeyRound" class="text-primary mt-0.5 size-5 shrink-0" aria-hidden="true" />
+          <div>
+            <p class="font-medium">Sign in to create API keys</p>
+            <p class="text-muted-foreground text-sm">Anonymous calls work at 30 requests/minute. A free key raises that to 120/minute and 20,000/day.</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <a z-button zType="outline" routerLink="/login" [queryParams]="{ returnUrl: '/developers' }">Sign in</a>
+          <a z-button routerLink="/register" [queryParams]="{ returnUrl: '/developers' }">Create account</a>
+        </div>
+      </z-card-content>
+    </z-card>
+  } @else {
+    <!-- API keys -->
+    <z-card>
+      <z-card-header>
+        <z-card-title>API keys</z-card-title>
+        <z-card-description>{{ activeKeys().length }} of {{ maxKeys }} active keys. Keys are stored hashed — we only keep the prefix.</z-card-description>
+        <div z-card-action>
+          <button type="button" z-button [zDisabled]="!canCreate()" [zTooltip]="canCreate() ? null : 'Revoke a key to create another'" (click)="openCreate()">
+            <ng-icon name="lucidePlus" aria-hidden="true" /> New key
+          </button>
+        </div>
+      </z-card-header>
+      <z-card-content>
+        @if (keys.isLoading() && !keys.hasValue()) {
+          <div class="space-y-2">
+            @for (i of [1, 2, 3]; track i) {
+              <z-skeleton class="h-10 w-full" />
+            }
+          </div>
+        } @else if (keys.error()) {
+          <app-error-state [error]="keys.error()" (retry)="keys.reload()" />
+        } @else if (keys.hasValue()) {
+          @if (!keys.value().length) {
+            <z-empty zIcon="lucideKeyRound" zTitle="No API keys yet" zDescription="Create a key to call the API from scripts, notebooks or servers.">
+              <button type="button" z-button zSize="sm" (click)="openCreate()"><ng-icon name="lucidePlus" aria-hidden="true" /> Create your first key</button>
+            </z-empty>
+          } @else {
+            <div class="-mx-4 overflow-x-auto sm:mx-0">
+              <table z-table class="min-w-[44rem]">
+                <thead z-table-header>
+                  <tr z-table-row>
+                    <th z-table-head scope="col">Name</th>
+                    <th z-table-head scope="col">Key</th>
+                    <th z-table-head scope="col">Tier</th>
+                    <th z-table-head scope="col">Created</th>
+                    <th z-table-head scope="col">Last used</th>
+                    <th z-table-head scope="col" class="text-right">Requests</th>
+                    <th z-table-head scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody z-table-body>
+                  @for (k of keys.value(); track k.id) {
+                    <tr z-table-row [class.opacity-60]="k.revokedAt">
+                      <td z-table-cell class="font-medium">
+                        {{ k.name }}
+                        @if (k.revokedAt) {
+                          <z-badge zType="destructive" class="ml-1">Revoked</z-badge>
+                        }
+                      </td>
+                      <td z-table-cell class="font-mono text-xs">{{ k.prefix }}••••••••</td>
+                      <td z-table-cell><z-badge zType="outline">{{ k.tier }}</z-badge></td>
+                      <td z-table-cell class="text-muted-foreground text-xs">{{ k.createdAt | date: 'mediumDate' }}</td>
+                      <td z-table-cell class="text-muted-foreground text-xs">{{ k.lastUsedAt ? (k.lastUsedAt | date: 'MMM d, h:mm a') : 'Never' }}</td>
+                      <td z-table-cell class="tabular text-right">{{ k.requestCount | number }}</td>
+                      <td z-table-cell class="text-right">
+                        <div class="flex justify-end gap-1">
+                          <button type="button" z-button zType="ghost" zSize="icon-sm" [zDisabled]="!!k.revokedAt" [zTooltip]="'Rotate secret'" [attr.aria-label]="'Rotate ' + k.name" (click)="rotate(k)">
+                            <ng-icon name="lucideRefreshCw" aria-hidden="true" />
+                          </button>
+                          <button type="button" z-button zType="ghost" zSize="icon-sm" class="text-destructive" [zDisabled]="!!k.revokedAt" [zTooltip]="'Revoke'" [attr.aria-label]="'Revoke ' + k.name" (click)="revoke(k)">
+                            <ng-icon name="lucideTrash2" aria-hidden="true" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+      </z-card-content>
+    </z-card>
+
+    <!-- Usage -->
+    <div class="grid gap-6 lg:grid-cols-3">
+      <z-card class="lg:col-span-2">
+        <z-card-header>
+          <z-card-title>Requests, last 30 days</z-card-title>
+          <z-card-description>
+            @if (usage.hasValue()) {
+              {{ usage.value().totalRequests | number }} requests across all keys
+            } @else {
+              Usage is flushed from the gateway every 30 seconds.
+            }
+          </z-card-description>
+        </z-card-header>
+        <z-card-content>
+          @if (usage.isLoading()) {
+            <z-skeleton class="h-44 w-full" />
+          } @else if (usage.error()) {
+            <app-error-state [error]="usage.error()" (retry)="usage.reload()" />
+          } @else {
+            <app-bar-chart [data]="daily()" ariaLabel="Daily API requests, last 30 days" unit="requests" [labelEvery]="5" />
+          }
+        </z-card-content>
+      </z-card>
+      <z-card>
+        <z-card-header>
+          <z-card-title>By key</z-card-title>
+        </z-card-header>
+        <z-card-content>
+          @if (usage.hasValue() && usage.value().byKey.length) {
+            <ul class="space-y-2 text-sm">
+              @for (k of usage.value().byKey; track k.keyId) {
+                <li class="flex items-center justify-between gap-2">
+                  <span class="truncate">{{ k.name }}</span>
+                  <span class="tabular text-muted-foreground">{{ k.requests | number }}</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="text-muted-foreground text-sm">No keyed requests yet.</p>
+          }
+        </z-card-content>
+      </z-card>
+    </div>
+  }
+
+  <!-- Tiers -->
+  <section aria-labelledby="tiers-h" class="space-y-3">
+    <h2 id="tiers-h" class="text-lg font-semibold">Rate-limit tiers</h2>
+    <div class="overflow-x-auto rounded-lg border">
+      <table z-table>
+        <thead z-table-header>
+          <tr z-table-row>
+            <th z-table-head scope="col">Tier</th>
+            <th z-table-head scope="col">Identified by</th>
+            <th z-table-head scope="col" class="text-right">Per minute</th>
+            <th z-table-head scope="col" class="text-right">Per day</th>
+          </tr>
+        </thead>
+        <tbody z-table-body>
+          @for (t of tiers; track t.tier) {
+            <tr z-table-row>
+              <td z-table-cell><z-badge [zType]="t.tier === 'FREE' ? 'default' : 'outline'">{{ t.tier }}</z-badge></td>
+              <td z-table-cell class="text-muted-foreground">{{ t.identity }}</td>
+              <td z-table-cell class="tabular text-right">{{ t.perMinute | number }}</td>
+              <td z-table-cell class="tabular text-right">{{ t.perDay | number }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="text-muted-foreground text-xs">
+      Every response carries <code class="font-mono">X-RateLimit-Limit</code>, <code class="font-mono">X-RateLimit-Remaining</code> and
+      <code class="font-mono">X-RateLimit-Reset</code>. Over the limit you get <code class="font-mono">429</code> with <code class="font-mono">Retry-After</code>.
+    </p>
+  </section>
+
+  <!-- Snippets -->
+  <section aria-labelledby="snippets-h" class="space-y-3">
+    <h2 id="snippets-h" class="text-lg font-semibold">Quick start</h2>
+    <app-code-tabs [samples]="snippets()" idPrefix="dev" ariaLabel="Quick start code samples" />
+  </section>
+
+  <!-- API reference -->
+  <section aria-labelledby="docs-h" class="space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 id="docs-h" class="text-lg font-semibold">API reference</h2>
+      <div class="flex gap-2">
+        <button type="button" z-button zType="outline" zSize="sm" [attr.aria-expanded]="showDocs()" aria-controls="swagger-frame" (click)="showDocs.set(!showDocs())">
+          {{ showDocs() ? 'Hide embedded docs' : 'Show embedded docs' }}
+        </button>
+        <a z-button zType="ghost" zSize="sm" [href]="swaggerUrl" target="_blank" rel="noopener">
+          <ng-icon name="lucideExternalLink" aria-hidden="true" /> Open in new tab
+        </a>
+      </div>
+    </div>
+    @if (showDocs()) {
+      <iframe
+        id="swagger-frame"
+        [src]="swaggerSafe"
+        title="OpenPTO API reference (Swagger UI)"
+        class="h-[75vh] w-full rounded-lg border bg-white"
+        loading="lazy"
+      ></iframe>
+    } @else {
+      <p class="text-muted-foreground text-sm">The aggregated OpenAPI documentation for the ODP, fees and ingest services is served by the gateway.</p>
+    }
+  </section>
+</div>
+
+<ng-template #createTpl let-dialogRef="dialogRef">
+  <form class="space-y-4" (submit)="create($event, dialogRef)">
+    <div class="space-y-1.5">
+      <label for="key-name" class="text-sm font-medium">Key name</label>
+      <input
+        id="key-name"
+        z-input
+        maxlength="64"
+        required
+        placeholder="e.g. research-notebook"
+        [value]="newKeyName()"
+        (input)="newKeyName.set($any($event.target).value)"
+      />
+    </div>
+    <div class="flex justify-end gap-2">
+      <button type="button" z-button zType="outline" (click)="dialogRef.close()">Cancel</button>
+      <button type="submit" z-button [zDisabled]="!newKeyName().trim() || creating()" [zLoading]="creating()">Create key</button>
+    </div>
+  </form>
+</ng-template>
+
+<ng-template #revealTpl>
+  @if (revealed(); as k) {
+    <div class="space-y-3">
+      <z-alert zType="destructive" zIcon="lucideTriangleAlert" zTitle="Shown only once" zDescription="Store this key in a secret manager or environment variable. If you lose it, rotate the key." />
+      <label for="revealed-key" class="text-sm font-medium">{{ k.name }}</label>
+      <div class="flex gap-2">
+        <input id="revealed-key" z-input readonly class="font-mono text-xs" [value]="k.key ?? ''" (focus)="$any($event.target).select()" />
+        <app-copy-button [value]="k.key ?? ''" tooltip="Copy API key" type="outline" />
+      </div>
+    </div>
+  }
+</ng-template>

@@ -1,0 +1,120 @@
+plugins {
+	id 'java'
+	id 'jacoco'
+	id 'org.springframework.boot' version '4.1.1'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'gov.openpto'
+version = '0.0.1-SNAPSHOT'
+description = 'OpenPTO ingest-service: legacy USPTO XML -> JSON pipeline (local S3 + Lambda emulation)'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+ext {
+	set('springCloudVersion', '2025.1.3')
+	set('awsSdkVersion', '2.31.0')
+}
+
+dependencies {
+	implementation project(':transform-lambda')
+
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-flyway'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'org.springframework.boot:spring-boot-starter-restclient'
+	implementation 'org.flywaydb:flyway-database-postgresql'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0'
+	implementation 'org.springframework.cloud:spring-cloud-function-context'
+	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+	runtimeOnly 'org.postgresql:postgresql'
+
+	// The S3 adapter (profile "aws") is compiled locally but the SDK is only shipped when
+	// building for AWS:  .\gradlew.bat bootJar -Paws
+	if (project.hasProperty('aws')) {
+		implementation 'software.amazon.awssdk:s3'
+	} else {
+		compileOnly 'software.amazon.awssdk:s3'
+	}
+
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-flyway-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testImplementation 'org.awaitility:awaitility'
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+		mavenBom "software.amazon.awssdk:bom:${awsSdkVersion}"
+	}
+}
+
+// Sample XML files live in ./samples (checked in) and are served from the classpath.
+tasks.named('processResources') {
+	from('samples') {
+		into 'samples'
+	}
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+	finalizedBy tasks.named('jacocoTestReport')
+}
+
+tasks.named('jacocoTestReport') {
+	dependsOn tasks.named('test')
+	reports {
+		xml.required = true
+		html.required = true
+	}
+	classDirectories.setFrom(files(sourceSets.main.output.classesDirs.collect {
+		fileTree(dir: it, exclude: ['**/IngestServiceApplication*', '**/storage/S3ObjectStorage*'])
+	}))
+}
+
+tasks.named('jacocoTestCoverageVerification') {
+	dependsOn tasks.named('jacocoTestReport')
+	violationRules {
+		rule {
+			element = 'PACKAGE'
+			includes = ['gov.openpto.ingest.service']
+			limit {
+				counter = 'LINE'
+				minimum = 0.80
+			}
+		}
+	}
+	classDirectories.setFrom(tasks.named('jacocoTestReport').get().classDirectories)
+}
+
+tasks.named('check') {
+	dependsOn tasks.named('jacocoTestCoverageVerification')
+}
+
+// Only the executable Spring Boot jar is shipped.
+tasks.named('jar') {
+	enabled = false
+}

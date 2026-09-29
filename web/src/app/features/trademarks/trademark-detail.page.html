@@ -1,0 +1,169 @@
+<div class="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
+  <app-breadcrumbs [items]="[{ label: 'Trademarks', link: '/trademarks' }, { label: serialNumber() }]" />
+
+  @if (tm.isLoading() && !tm.hasValue()) {
+    <div class="space-y-4" aria-busy="true" aria-label="Loading trademark">
+      <z-skeleton class="h-24 w-full" />
+      <div class="grid gap-4 md:grid-cols-2">
+        <z-skeleton class="h-48" />
+        <z-skeleton class="h-48" />
+      </div>
+    </div>
+  } @else if (notFound()) {
+    <z-empty
+      class="rounded-xl border border-dashed py-16"
+      zIcon="lucideFileX"
+      zTitle="Trademark not found"
+      [zDescription]="'No record exists for serial number ' + serialNumber() + '.'"
+    >
+      <a z-button zType="outline" routerLink="/trademarks"><ng-icon name="lucideArrowLeft" aria-hidden="true" /> Back to search</a>
+    </z-empty>
+  } @else if (tm.error()) {
+    <app-error-state [error]="tm.error()" (retry)="tm.reload()" />
+  } @else if (tm.hasValue()) {
+    @let t = tm.value();
+
+    <!-- TSDR-style status banner -->
+    <section
+      class="overflow-hidden rounded-xl border"
+      [class]="bannerBorder()"
+      aria-labelledby="mark-h"
+    >
+      <div class="bg-card grid gap-6 p-5 sm:grid-cols-[1fr_auto] sm:p-6">
+        <div class="space-y-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <app-status-badge [status]="t.status" />
+            <z-badge zType="outline">{{ humanize(t.markType) }}</z-badge>
+            @if (t.source === 'INGEST') {
+              <z-badge zType="secondary">Ingested</z-badge>
+            }
+          </div>
+          <h1 id="mark-h" class="font-serif text-3xl font-semibold tracking-tight break-words sm:text-4xl">{{ t.markText }}</h1>
+          <p class="text-muted-foreground text-sm">
+            {{ isLive() ? 'This mark is live.' : 'This mark is dead.' }}
+            Status as of {{ t.statusDate ? (t.statusDate | date: 'longDate') : 'unknown date' }}.
+          </p>
+        </div>
+        <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:text-right">
+          <dt class="text-muted-foreground">Serial</dt>
+          <dd class="flex items-center gap-1 font-mono sm:justify-end">
+            {{ t.serialNumber }} <app-copy-button [value]="t.serialNumber" tooltip="Copy serial number" />
+          </dd>
+          <dt class="text-muted-foreground">Registration</dt>
+          <dd class="font-mono">{{ t.registrationNumber ?? '—' }}</dd>
+          <dt class="text-muted-foreground">Filed</dt>
+          <dd>{{ t.filingDate ? (t.filingDate | date: 'mediumDate') : '—' }}</dd>
+          <dt class="text-muted-foreground">Registered</dt>
+          <dd>{{ t.registrationDate ? (t.registrationDate | date: 'mediumDate') : '—' }}</dd>
+        </dl>
+      </div>
+      <div class="bg-muted/40 flex flex-wrap gap-2 border-t px-5 py-2 print:hidden">
+        <button type="button" z-button zType="ghost" zSize="sm" (click)="download()">
+          <ng-icon name="lucideDownload" aria-hidden="true" /> Download JSON
+        </button>
+        @if (t.ingestJobId) {
+          <a z-button zType="ghost" zSize="sm" [routerLink]="['/pipeline/jobs', t.ingestJobId]">Source ingest job</a>
+        }
+      </div>
+    </section>
+
+    <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
+      <div class="min-w-0 space-y-6">
+        <z-card>
+          <z-card-header>
+            <z-card-title>Goods and services</z-card-title>
+            <z-card-description>Grouped by international (Nice) class</z-card-description>
+          </z-card-header>
+          <z-card-content>
+            <ol class="space-y-4">
+              @for (g of goodsByClass(); track g.niceClass) {
+                <li class="grid gap-2 sm:grid-cols-[5.5rem_1fr]">
+                  <a
+                    [routerLink]="['/trademarks']"
+                    [queryParams]="{ niceClass: g.niceClass }"
+                    class="bg-muted h-fit rounded-md px-2 py-1 text-center text-xs font-semibold hover:underline"
+                    [attr.aria-label]="'Search class ' + g.niceClass"
+                    >Class {{ g.niceClass }}</a
+                  >
+                  <div class="space-y-1 text-sm leading-relaxed">
+                    @for (item of g.items; track $index) {
+                      <p>{{ item.description }}</p>
+                    }
+                  </div>
+                </li>
+              } @empty {
+                <li class="text-muted-foreground text-sm">No goods or services on record.</li>
+              }
+            </ol>
+          </z-card-content>
+        </z-card>
+
+        <z-card>
+          <z-card-header>
+            <z-card-title>Prosecution history</z-card-title>
+            <z-card-description>{{ events().length }} events, newest first</z-card-description>
+          </z-card-header>
+          <z-card-content>
+            <ol class="relative ml-2 border-l">
+              @for (e of events(); track $index; let first = $first) {
+                <li class="relative pb-5 pl-6 last:pb-0">
+                  <span
+                    class="ring-background absolute top-1 -left-[5px] size-2.5 rounded-full ring-4"
+                    [class.bg-primary]="first"
+                    [class.bg-muted-foreground]="!first"
+                    aria-hidden="true"
+                  ></span>
+                  <div class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                    <time class="tabular text-sm font-medium" [attr.datetime]="e.date">{{ e.date | date: 'mediumDate' }}</time>
+                    <span class="text-muted-foreground font-mono text-xs">{{ e.code }}</span>
+                  </div>
+                  <p class="text-sm">{{ e.description }}</p>
+                </li>
+              } @empty {
+                <li class="text-muted-foreground pl-6 text-sm">No events recorded.</li>
+              }
+            </ol>
+          </z-card-content>
+        </z-card>
+      </div>
+
+      <aside class="space-y-6">
+        <z-card>
+          <z-card-header>
+            <z-card-title class="text-base">Owner &amp; correspondence</z-card-title>
+          </z-card-header>
+          <z-card-content>
+            <dl class="space-y-3 text-sm">
+              <div>
+                <dt class="text-muted-foreground text-xs">Owner</dt>
+                <dd class="font-medium">
+                  @if (t.owner) {
+                    <a [routerLink]="['/trademarks']" [queryParams]="{ owner: t.owner }" class="hover:underline">{{ t.owner }}</a>
+                  } @else {
+                    —
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground text-xs">Owner address</dt>
+                <dd class="whitespace-pre-line">{{ t.ownerAddress ?? '—' }}</dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground text-xs">Attorney of record</dt>
+                <dd>{{ t.attorney ?? '—' }}</dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground text-xs">Filing basis</dt>
+                <dd>{{ basis(t.filingBasis) }}</dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground text-xs">Classes</dt>
+                <dd>{{ t.niceClasses.join(', ') || '—' }}</dd>
+              </div>
+            </dl>
+          </z-card-content>
+        </z-card>
+      </aside>
+    </div>
+  }
+</div>

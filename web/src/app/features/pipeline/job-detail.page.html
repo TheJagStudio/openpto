@@ -1,0 +1,151 @@
+<div class="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
+  <app-breadcrumbs [items]="[{ label: 'Data pipeline', link: '/pipeline' }, { label: 'Job' }]" />
+
+  @if (job.isLoading() && !job.hasValue()) {
+    <div class="space-y-4" aria-busy="true">
+      <z-skeleton class="h-8 w-80" />
+      <z-skeleton class="h-24 w-full" />
+      <z-skeleton class="h-48 w-full" />
+    </div>
+  } @else if (notFound()) {
+    <z-empty class="rounded-xl border border-dashed py-16" zIcon="lucideFileX" zTitle="Job not found" zDescription="It may have been deleted, or it belongs to another user.">
+      <a z-button zType="outline" routerLink="/pipeline">Back to pipeline</a>
+    </z-empty>
+  } @else if (job.error()) {
+    <app-error-state [error]="job.error()" (retry)="job.reload()" />
+  } @else if (job.hasValue()) {
+    @let j = job.value();
+
+    <header class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      <div class="min-w-0 space-y-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <app-status-badge [status]="j.status" />
+          <span class="text-muted-foreground text-xs">{{ humanize(j.documentFormat) }}</span>
+        </div>
+        <h1 class="truncate text-2xl font-semibold tracking-tight">{{ j.fileName }}</h1>
+        <p class="text-muted-foreground flex items-center gap-1 font-mono text-xs">
+          {{ j.id }} <app-copy-button [value]="j.id" tooltip="Copy job id" />
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        @if (canRetry()) {
+          <button type="button" z-button zType="outline" [zDisabled]="busy()" (click)="retry()">
+            <ng-icon name="lucideRotateCcw" aria-hidden="true" /> Retry
+          </button>
+        }
+        <button type="button" z-button zType="destructive" [zDisabled]="busy()" (click)="remove()">
+          <ng-icon name="lucideTrash2" aria-hidden="true" /> Delete
+        </button>
+      </div>
+    </header>
+
+    <z-card>
+      <z-card-content class="pt-5">
+        <app-stage-stepper [job]="j" />
+      </z-card-content>
+    </z-card>
+
+    <dl class="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border md:grid-cols-4">
+      <div class="bg-card p-4">
+        <dt class="text-muted-foreground text-xs">Records parsed</dt>
+        <dd class="tabular text-2xl font-semibold">{{ j.recordsTotal | number }}</dd>
+      </div>
+      <div class="bg-card p-4">
+        <dt class="text-muted-foreground text-xs">Loaded</dt>
+        <dd class="tabular text-2xl font-semibold text-emerald-700 dark:text-emerald-400">{{ j.recordsLoaded | number }}</dd>
+        <z-progress class="mt-2" [value]="loadPct()" [attr.aria-label]="loadPct() + '% loaded'" />
+      </div>
+      <div class="bg-card p-4">
+        <dt class="text-muted-foreground text-xs">Failed</dt>
+        <dd class="tabular text-2xl font-semibold" [class.text-destructive]="j.recordsFailed > 0">{{ j.recordsFailed | number }}</dd>
+      </div>
+      <div class="bg-card p-4">
+        <dt class="text-muted-foreground text-xs">Duration</dt>
+        <dd class="tabular text-2xl font-semibold">{{ formatDuration(j.durationMs) }}</dd>
+      </div>
+    </dl>
+
+    <z-card>
+      <z-card-header>
+        <z-card-title>Details</z-card-title>
+      </z-card-header>
+      <z-card-content>
+        <dl class="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+          <div><dt class="text-muted-foreground text-xs">Size</dt><dd>{{ formatBytes(j.sizeBytes) }}</dd></div>
+          <div><dt class="text-muted-foreground text-xs">Created</dt><dd>{{ j.createdAt | date: 'medium' }}</dd></div>
+          <div><dt class="text-muted-foreground text-xs">Started</dt><dd>{{ j.startedAt ? (j.startedAt | date: 'medium') : '—' }}</dd></div>
+          <div><dt class="text-muted-foreground text-xs">Finished</dt><dd>{{ j.finishedAt ? (j.finishedAt | date: 'medium') : '—' }}</dd></div>
+          <div class="min-w-0"><dt class="text-muted-foreground text-xs">Raw object</dt><dd class="truncate font-mono text-xs">{{ j.rawObjectKey ?? '—' }}</dd></div>
+          <div class="min-w-0"><dt class="text-muted-foreground text-xs">JSON object</dt><dd class="truncate font-mono text-xs">{{ j.jsonObjectKey ?? '—' }}</dd></div>
+        </dl>
+      </z-card-content>
+    </z-card>
+
+    @if (j.errors.length) {
+      <section aria-labelledby="errors-h" class="space-y-2">
+        <h2 id="errors-h" class="text-lg font-semibold">Errors <span class="text-muted-foreground text-sm font-normal">({{ j.errors.length }}{{ j.errors.length >= 200 ? '+, first 200 shown' : '' }})</span></h2>
+        <div class="max-h-96 overflow-auto rounded-lg border">
+          <table z-table>
+            <thead z-table-header>
+              <tr z-table-row>
+                <th z-table-head scope="col" class="w-20 text-right">#</th>
+                <th z-table-head scope="col" class="w-48">Identifier</th>
+                <th z-table-head scope="col">Message</th>
+              </tr>
+            </thead>
+            <tbody z-table-body>
+              @for (e of j.errors; track $index) {
+                <tr z-table-row>
+                  <td z-table-cell class="tabular text-right text-xs">{{ e.index }}</td>
+                  <td z-table-cell class="font-mono text-xs">{{ e.identifier ?? '—' }}</td>
+                  <td z-table-cell class="text-destructive text-xs whitespace-normal">{{ e.message }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    <section aria-labelledby="json-h" class="space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="json-h" class="text-lg font-semibold">Transformed JSON</h2>
+        <div class="flex gap-2">
+          <button type="button" z-button zType="outline" zSize="sm" [zDisabled]="!j.jsonObjectKey" [zLoading]="output.isLoading()" (click)="loadJson()">
+            <ng-icon name="lucideBraces" aria-hidden="true" /> {{ showJson() ? 'Refresh preview' : 'Preview JSON' }}
+          </button>
+          <button type="button" z-button zType="ghost" zSize="sm" [zDisabled]="!j.jsonObjectKey" (click)="download()">
+            <ng-icon name="lucideDownload" aria-hidden="true" /> Download
+          </button>
+        </div>
+      </div>
+      @if (!j.jsonObjectKey) {
+        <p class="text-muted-foreground text-sm">JSON output becomes available once the transform stage completes.</p>
+      } @else if (output.isLoading()) {
+        <z-skeleton class="h-64 w-full" />
+      } @else if (output.error()) {
+        <app-error-state [error]="output.error()" (retry)="output.reload()" />
+      } @else if (output.hasValue()) {
+        @if (links().length) {
+          <div class="space-y-1.5">
+            <h3 class="text-sm font-medium">Loaded records</h3>
+            <ul class="flex flex-wrap gap-1.5">
+              @for (l of links(); track l.label) {
+                <li>
+                  <a [routerLink]="l.link" class="bg-muted hover:bg-muted/70 inline-flex max-w-72 items-center gap-1.5 rounded-md px-2 py-1 text-xs" [title]="l.title">
+                    <span class="font-mono font-medium">{{ l.label }}</span>
+                    <span class="text-muted-foreground truncate">{{ l.title }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+        <p class="text-muted-foreground text-xs">
+          Showing {{ preview().length }} of {{ output.value().length | number }} records.
+        </p>
+        <app-json-viewer [value]="preview()" ariaLabel="Transformed JSON preview" />
+      }
+    </section>
+  }
+</div>

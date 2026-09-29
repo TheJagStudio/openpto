@@ -1,0 +1,312 @@
+<div class="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+  <app-page-header
+    eyebrow="Open Data"
+    heading="Patent search"
+    description="Full-text search over titles, abstracts, assignees and inventors. Every search is a shareable URL."
+  >
+    <div actions class="flex gap-2">
+      <a z-button zType="outline" zSize="sm" [href]="exportCsv()" download>
+        <ng-icon name="lucideDownload" aria-hidden="true" /> CSV
+      </a>
+      <a z-button zType="outline" zSize="sm" [href]="exportJson()" download>
+        <ng-icon name="lucideDownload" aria-hidden="true" /> JSON
+      </a>
+    </div>
+  </app-page-header>
+
+  <form role="search" class="flex flex-col gap-2 sm:flex-row" (submit)="submitSearch($event)">
+    <label for="patent-q" class="sr-only">Search patents</label>
+    <div class="relative flex-1">
+      <ng-icon name="lucideSearch" class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" aria-hidden="true" />
+      <input
+        id="patent-q"
+        z-input
+        type="search"
+        autocomplete="off"
+        class="h-10 pl-9"
+        placeholder="e.g. lithium battery cathode, &quot;machine learning&quot; -image"
+        [value]="qInput()"
+        (input)="qInput.set($any($event.target).value)"
+      />
+    </div>
+    <div class="flex gap-2">
+      <z-select
+        class="w-full sm:w-48"
+        zAriaLabel="Sort results"
+        zPlaceholder="Best match"
+        [zValue]="criteria().sort ?? ''"
+        (zSelectionChange)="onSelect('sort', $event)"
+      >
+        @for (o of sortOptions; track o.value) {
+          <z-select-item [zValue]="o.value">{{ o.label }}</z-select-item>
+        }
+      </z-select>
+      <button
+        type="button"
+        z-button
+        zType="outline"
+        class="h-9 lg:hidden"
+        [attr.aria-expanded]="filtersOpen()"
+        aria-controls="patent-filters"
+        (click)="filtersOpen.set(!filtersOpen())"
+      >
+        <ng-icon name="lucideSlidersHorizontal" aria-hidden="true" /> Filters
+        @if (activeFilters().length) {
+          <z-badge zType="secondary">{{ activeFilters().length }}</z-badge>
+        }
+      </button>
+    </div>
+  </form>
+
+  @if (activeFilters().length || criteria().q) {
+    <div class="flex flex-wrap items-center gap-2" aria-label="Active filters">
+      @for (f of activeFilters(); track f.key) {
+        <z-badge zType="secondary" class="gap-1 py-1 pr-1 pl-2">
+          <span class="text-muted-foreground">{{ f.label }}:</span> {{ f.value }}
+          <button
+            type="button"
+            class="hover:bg-background/80 focus-visible:ring-ring/50 rounded-full p-0.5 outline-none focus-visible:ring-2"
+            [attr.aria-label]="'Remove filter ' + f.label"
+            (click)="clearFilter(f.key)"
+          >
+            <ng-icon name="lucideX" class="size-3" aria-hidden="true" />
+          </button>
+        </z-badge>
+      }
+      <button type="button" z-button zType="link" zSize="sm" (click)="clearAll()">Clear all</button>
+    </div>
+  }
+
+  <div class="grid gap-6 lg:grid-cols-[17rem_1fr]">
+    <!-- Filters + facets -->
+    <aside id="patent-filters" class="space-y-5 lg:block" [class.hidden]="!filtersOpen()" aria-label="Filters">
+      <z-card>
+        <z-card-content class="space-y-4 pt-4">
+          <div class="space-y-1.5">
+            <span class="text-sm font-medium" id="type-label">Patent type</span>
+            <z-select zAriaLabel="Patent type" zPlaceholder="Any type" [zValue]="criteria().type ?? ''" (zSelectionChange)="onSelect('type', $event)">
+              <z-select-item zValue="">Any type</z-select-item>
+              @for (t of types; track t) {
+                <z-select-item [zValue]="t">{{ humanize(t) }}</z-select-item>
+              }
+            </z-select>
+          </div>
+          <div class="space-y-1.5">
+            <span class="text-sm font-medium">Status</span>
+            <z-select zAriaLabel="Status" zPlaceholder="Any status" [zValue]="criteria().status ?? ''" (zSelectionChange)="onSelect('status', $event)">
+              <z-select-item zValue="">Any status</z-select-item>
+              @for (s of statuses; track s) {
+                <z-select-item [zValue]="s">{{ humanize(s) }}</z-select-item>
+              }
+            </z-select>
+          </div>
+          <div class="space-y-1.5">
+            <label for="f-cpc" class="text-sm font-medium">CPC prefix</label>
+            <input id="f-cpc" z-input placeholder="e.g. G06F" [value]="criteria().cpc ?? ''" (change)="onText('cpc', $event)" />
+          </div>
+          <div class="space-y-1.5">
+            <label for="f-assignee" class="text-sm font-medium">Assignee</label>
+            <input id="f-assignee" z-input placeholder="Company or person" [value]="criteria().assignee ?? ''" (change)="onText('assignee', $event)" />
+          </div>
+          <div class="space-y-1.5">
+            <label for="f-inventor" class="text-sm font-medium">Inventor</label>
+            <input id="f-inventor" z-input placeholder="Inventor name" [value]="criteria().inventor ?? ''" (change)="onText('inventor', $event)" />
+          </div>
+          <fieldset class="space-y-1.5">
+            <legend class="mb-1.5 text-sm font-medium">Filing date</legend>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="sr-only" for="f-filed-from">Filed from</label>
+              <input id="f-filed-from" z-input type="date" [value]="criteria().filedFrom ?? ''" (change)="onText('filedFrom', $event)" />
+              <label class="sr-only" for="f-filed-to">Filed to</label>
+              <input id="f-filed-to" z-input type="date" [value]="criteria().filedTo ?? ''" (change)="onText('filedTo', $event)" />
+            </div>
+          </fieldset>
+          <fieldset class="space-y-1.5">
+            <legend class="mb-1.5 text-sm font-medium">Grant date</legend>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="sr-only" for="f-granted-from">Granted from</label>
+              <input id="f-granted-from" z-input type="date" [value]="criteria().grantedFrom ?? ''" (change)="onText('grantedFrom', $event)" />
+              <label class="sr-only" for="f-granted-to">Granted to</label>
+              <input id="f-granted-to" z-input type="date" [value]="criteria().grantedTo ?? ''" (change)="onText('grantedTo', $event)" />
+            </div>
+          </fieldset>
+        </z-card-content>
+      </z-card>
+
+      @if (facets.isLoading() && !facets.hasValue()) {
+        <div class="space-y-3" aria-hidden="true">
+          @for (i of [1, 2, 3]; track i) {
+            <z-skeleton class="h-4 w-24" />
+            <z-skeleton class="h-20 w-full" />
+          }
+        </div>
+      } @else if (facets.hasValue()) {
+        @let f = facets.value();
+        <ng-template #facetList let-title="title" let-rows="rows" let-key="key" let-label="label">
+          @if (rows.length) {
+            <section class="space-y-1.5">
+              <h2 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{{ title }}</h2>
+              <ul class="space-y-0.5">
+                @for (r of rows; track r.value) {
+                  <li>
+                    <button
+                      type="button"
+                      class="hover:bg-muted focus-visible:ring-ring/50 relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-md px-2 py-1.5 text-left text-sm outline-none focus-visible:ring-2"
+                      [class.bg-muted]="isFacetActive(key, r.value)"
+                      [class.font-medium]="isFacetActive(key, r.value)"
+                      [attr.aria-pressed]="isFacetActive(key, r.value)"
+                      (click)="toggleFacet(key, r.value)"
+                    >
+                      <span
+                        class="bg-primary/10 absolute inset-y-0 left-0 -z-0"
+                        [style.width.%]="(r.count / maxCount(rows)) * 100"
+                        aria-hidden="true"
+                      ></span>
+                      <span class="relative truncate">{{ label ? label(r.value) : r.value }}</span>
+                      <span class="tabular text-muted-foreground relative text-xs">{{ r.count | number }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+        </ng-template>
+        <div class="space-y-5">
+          <ng-container *ngTemplateOutlet="facetList; context: { title: 'Type', rows: f.types, key: 'type', label: humanize }" />
+          <ng-container *ngTemplateOutlet="facetList; context: { title: 'Status', rows: f.statuses, key: 'status', label: humanize }" />
+          <ng-container *ngTemplateOutlet="facetList; context: { title: 'CPC section', rows: f.cpcSections, key: 'cpc', label: cpcLabel }" />
+          <ng-container *ngTemplateOutlet="facetList; context: { title: 'Top assignees', rows: f.topAssignees, key: 'assignee', label: null }" />
+          @if (f.years.length) {
+            <section class="space-y-1.5">
+              <h2 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Grant year</h2>
+              <div class="flex flex-wrap gap-1">
+                @for (y of f.years.slice(-16); track y.value) {
+                  <button
+                    type="button"
+                    class="hover:bg-muted focus-visible:ring-ring/50 rounded-md border px-2 py-1 text-xs outline-none focus-visible:ring-2"
+                    [class.bg-primary]="isYearActive(y.value)"
+                    [class.text-primary-foreground]="isYearActive(y.value)"
+                    [attr.aria-pressed]="isYearActive(y.value)"
+                    [attr.aria-label]="y.value + ', ' + y.count + ' patents'"
+                    (click)="toggleYear(y.value)"
+                  >
+                    {{ y.value }} <span class="opacity-70">{{ y.count | number }}</span>
+                  </button>
+                }
+              </div>
+            </section>
+          }
+        </div>
+      }
+    </aside>
+
+    <!-- Results -->
+    <section aria-labelledby="results-heading" class="min-w-0 space-y-4">
+      <h2 id="results-heading" class="sr-only">Results</h2>
+      <p class="text-muted-foreground text-sm" aria-live="polite" role="status">
+        @if (results.isLoading()) {
+          Searching…
+        } @else if (results.hasValue()) {
+          {{ results.value().totalElements | number }} {{ results.value().totalElements === 1 ? 'patent' : 'patents' }}
+          @if (criteria().q) {
+            for “{{ criteria().q }}”
+          }
+        }
+      </p>
+
+      @if (results.isLoading() && !results.hasValue()) {
+        <div class="space-y-3" aria-hidden="true">
+          @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+            <div class="space-y-2 rounded-lg border p-4">
+              <z-skeleton class="h-4 w-2/3" />
+              <z-skeleton class="h-3 w-1/3" />
+              <z-skeleton class="h-3 w-full" />
+            </div>
+          }
+        </div>
+      } @else if (results.error()) {
+        <app-error-state [error]="results.error()" (retry)="results.reload()" />
+      } @else if (results.hasValue()) {
+        @let page = results.value();
+        @if (page.content.length === 0) {
+          <z-empty
+            class="rounded-lg border border-dashed py-12"
+            zIcon="lucideFileText"
+            zTitle="No patents match"
+            zDescription="Try fewer words, a broader CPC prefix, or remove a filter."
+          >
+            <button type="button" z-button zType="outline" zSize="sm" (click)="clearAll()">Clear search</button>
+          </z-empty>
+        } @else {
+          <!-- Table (md+) -->
+          <div class="hidden overflow-hidden rounded-lg border md:block" [class.opacity-60]="results.isLoading()">
+            <table z-table>
+              <thead z-table-header>
+                <tr z-table-row>
+                  <th z-table-head scope="col" class="w-40">Patent</th>
+                  <th z-table-head scope="col">Title</th>
+                  <th z-table-head scope="col" class="w-32">Status</th>
+                  <th z-table-head scope="col" class="w-28">Granted</th>
+                </tr>
+              </thead>
+              <tbody z-table-body>
+                @for (p of page.content; track p.patentNumber) {
+                  <tr z-table-row>
+                    <td z-table-cell class="align-top">
+                      <a [routerLink]="['/patents', p.patentNumber]" class="text-primary font-mono text-xs font-medium hover:underline">{{ p.patentNumber }}</a>
+                      <div class="text-muted-foreground mt-1 text-xs">{{ humanize(p.type) }}</div>
+                    </td>
+                    <td z-table-cell class="max-w-0 align-top whitespace-normal">
+                      <a [routerLink]="['/patents', p.patentNumber]" class="line-clamp-2 font-medium hover:underline">{{ p.title }}</a>
+                      <div class="text-muted-foreground mt-1 truncate text-xs">
+                        {{ p.assignees.join(', ') || p.inventors.join(', ') }}
+                        @if (p.primaryCpc) {
+                          · <span class="font-mono">{{ p.primaryCpc }}</span>
+                        }
+                      </div>
+                      @if (p.abstractSnippet) {
+                        <p class="text-muted-foreground mt-1 line-clamp-2 text-xs">{{ p.abstractSnippet }}</p>
+                      }
+                    </td>
+                    <td z-table-cell class="align-top"><app-status-badge [status]="p.status" /></td>
+                    <td z-table-cell class="tabular text-muted-foreground align-top text-xs">
+                      {{ p.grantDate ? (p.grantDate | date: 'mediumDate') : '—' }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Cards (mobile) -->
+          <ul class="space-y-3 md:hidden">
+            @for (p of page.content; track p.patentNumber) {
+              <li class="bg-card rounded-lg border p-4">
+                <div class="flex items-start justify-between gap-2">
+                  <a [routerLink]="['/patents', p.patentNumber]" class="text-primary font-mono text-xs font-medium hover:underline">{{ p.patentNumber }}</a>
+                  <app-status-badge [status]="p.status" />
+                </div>
+                <a [routerLink]="['/patents', p.patentNumber]" class="mt-1 block font-medium hover:underline">{{ p.title }}</a>
+                <p class="text-muted-foreground mt-1 text-xs">
+                  {{ humanize(p.type) }} · {{ p.grantDate ? (p.grantDate | date: 'mediumDate') : 'Filed ' + (p.filingDate | date: 'mediumDate') }}
+                </p>
+                @if (p.assignees.length) {
+                  <p class="text-muted-foreground truncate text-xs">{{ p.assignees.join(', ') }}</p>
+                }
+              </li>
+            }
+          </ul>
+
+          <app-pager
+            [page]="page.page"
+            [totalPages]="page.totalPages"
+            [size]="page.size"
+            [totalElements]="page.totalElements"
+            ariaLabel="Patent results pages"
+            (pageChange)="goToPage($event)"
+          />
+        }
+      }
+    </section>
+  </div>
+</div>

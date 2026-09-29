@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE us-patent-grant SYSTEM "us-patent-grant-v47-2022-02-17.dtd" [ ]>
+<us-patent-grant lang="EN" dtd-version="v4.7 2022-02-17" file="US12345611-20250114.XML" status="PRODUCTION" id="us-patent-grant" country="US" date-produced="20241225" date-publ="20250114">
+<us-bibliographic-data-grant>
+<publication-reference>
+<document-id>
+<country>US</country>
+<doc-number>12345611</doc-number>
+<kind>B2</kind>
+<date>20250114</date>
+</document-id>
+</publication-reference>
+<application-reference appl-type="utility">
+<document-id>
+<country>US</country>
+<doc-number>17555123</doc-number>
+<date>20211217</date>
+</document-id>
+</application-reference>
+<classifications-cpc>
+<main-cpc>
+<classification-cpc>
+<section>F</section>
+<class>16</class>
+<subclass>K</subclass>
+<main-group>31</main-group>
+<subgroup>60</subgroup>
+</classification-cpc>
+</main-cpc>
+</classifications-cpc>
+<invention-title id="d2e61">Hand-operated valve with detent feedback</invention-title>
+<us-parties>
+<inventors>
+<inventor sequence="00" designation="us-only">
+<addressbook>
+<last-name>Moreau</last-name>
+<first-name>Camille</first-name>
+<address><city>Lyon</city><country>FR</country></address>
+</addressbook>
+</inventor>
+</inventors>
+</us-parties>
+</us-bibliographic-data-grant>
+<abstract id="abstract">
+<p id="p-0001" num="0000">A quarter-turn valve handle includes a spring detent that clicks at each 15 degree increment.</p>
+</abstract>
+<claims id="claims">
+<claim id="CLM-00001" num="00001">
+<claim-text>1. A valve comprising a handle and a spring detent engaging the handle at fixed angular increments.</claim-text>
+</claim>
+</claims>
+</us-patent-grant>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE us-patent-grant SYSTEM "us-patent-grant-v47-2022-02-17.dtd" [ ]>
+<us-patent-grant lang="EN" dtd-version="v4.7 2022-02-17" file="US12345612-20250114.XML" status="PRODUCTION" id="us-patent-grant" country="US" date-produced="20241225" date-publ="20250114">
+<us-bibliographic-data-grant>
+<publication-reference>
+<document-id>
+<country>US</country>
+<doc-number>12345612</doc-number>
+<kind>B2</kind>
+<date>20250114</date>
+</document-id>
+</publication-reference>
+<application-reference appl-type="utility">
+<document-id>
+<country>US</country>
+<doc-number>17555124</doc-number>
+<date>20211217</date>
+<!-- truncated transmission: closing tags below do not match -->
+</application-reference>
+<invention-title id="d2e61">Broken record that must not abort the file
+</us-bibliographic-data-grant>
+</us-patent-grant>

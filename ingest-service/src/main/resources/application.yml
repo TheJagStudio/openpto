@@ -1,0 +1,105 @@
+spring:
+  application:
+    name: ingest-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/openpto}
+    username: ${DB_USER:openpto}
+    password: ${DB_PASSWORD:openpto}
+    hikari:
+      maximum-pool-size: 10
+      pool-name: ingest-pool
+  flyway:
+    schemas: ingest
+    default-schema: ingest
+    create-schemas: true
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: ingest
+        jdbc:
+          time_zone: UTC
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: ${MAX_FILE_SIZE:50MB}
+      max-request-size: ${MAX_REQUEST_SIZE:510MB}
+      file-size-threshold: 1MB
+  mvc:
+    problemdetails:
+      enabled: true
+    async:
+      request-timeout: 10m
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${app.jwks-uri}
+  lifecycle:
+    timeout-per-shutdown-phase: ${SHUTDOWN_TIMEOUT:150s}
+
+server:
+  port: ${PORT:8083}
+  shutdown: graceful
+  error:
+    include-stacktrace: never
+    include-message: never
+
+app:
+  jwks-uri: ${JWKS_URI:http://localhost:8081/.well-known/jwks.json}
+  jwt-issuer: ${JWT_ISSUER:openpto}
+  storage:
+    root: ${STORAGE_ROOT:../data/buckets}
+    raw-bucket: openpto-raw
+    processed-bucket: openpto-processed
+  odp:
+    base-url: ${ODP_BASE_URL:http://localhost:8081}
+    internal-token: ${INTERNAL_TOKEN:dev-internal-token-change-me}
+    connect-timeout: 5s
+    read-timeout: 60s
+    max-attempts: 3
+    initial-backoff: 500ms
+    batch-size: 500
+  ingest:
+    max-files: 10
+    max-file-bytes: 52428800
+    max-zip-entries: 200
+    max-zip-total-bytes: 209715200
+    max-compression-ratio: 100
+    core-pool-size: 2
+    max-pool-size: 4
+    queue-capacity: 100
+    shutdown-wait: 120s
+    stuck-after: 10m
+    max-stored-errors: 1000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: ingest-service
+    description: Legacy USPTO XML to JSON pipeline (local S3 + Lambda emulation)
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{requestId:-},%X{jobId:-}]"

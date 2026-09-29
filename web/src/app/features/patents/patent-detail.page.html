@@ -1,0 +1,223 @@
+<div class="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
+  <app-breadcrumbs [items]="[{ label: 'Patents', link: '/patents' }, { label: patentNumber() }]" />
+
+  @if (patent.isLoading() && !patent.hasValue()) {
+    <div class="space-y-4" aria-busy="true" aria-label="Loading patent">
+      <z-skeleton class="h-4 w-40" />
+      <z-skeleton class="h-8 w-3/4" />
+      <div class="grid gap-3 sm:grid-cols-3">
+        @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+          <z-skeleton class="h-14" />
+        }
+      </div>
+      <z-skeleton class="h-40 w-full" />
+    </div>
+  } @else if (notFound()) {
+    <z-empty
+      class="rounded-xl border border-dashed py-16"
+      zIcon="lucideFileX"
+      zTitle="Patent not found"
+      [zDescription]="'No record exists for ' + patentNumber() + '. Check the number format, e.g. US11234567B2.'"
+    >
+      <a z-button zType="outline" routerLink="/patents"><ng-icon name="lucideArrowLeft" aria-hidden="true" /> Back to search</a>
+    </z-empty>
+  } @else if (patent.error()) {
+    <app-error-state [error]="patent.error()" (retry)="patent.reload()" />
+  } @else if (patent.hasValue()) {
+    @let p = patent.value();
+
+    <header class="space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="font-mono text-sm font-medium">{{ p.patentNumber }}</span>
+        <app-copy-button [value]="p.patentNumber" tooltip="Copy patent number" />
+        <app-status-badge [status]="p.status" />
+        <z-badge zType="outline">{{ humanize(p.type) }}</z-badge>
+        @if (p.source === 'INGEST') {
+          <z-badge zType="secondary" zTooltip="Loaded through the XML → JSON pipeline">
+            <ng-icon name="lucideDatabase" aria-hidden="true" /> Ingested
+          </z-badge>
+        }
+      </div>
+      <h1 class="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">{{ p.title }}</h1>
+      <div class="flex flex-wrap gap-2 print:hidden">
+        <button type="button" z-button zType="outline" zSize="sm" (click)="openJson()">
+          <ng-icon name="lucideBraces" aria-hidden="true" /> View JSON
+        </button>
+        <button type="button" z-button zType="ghost" zSize="sm" (click)="downloadJson()">
+          <ng-icon name="lucideDownload" aria-hidden="true" /> Download
+        </button>
+        @if (p.ingestJobId) {
+          <a z-button zType="ghost" zSize="sm" [routerLink]="['/pipeline/jobs', p.ingestJobId]">Source ingest job</a>
+        }
+      </div>
+    </header>
+
+    <!-- Bibliographic data -->
+    <z-card>
+      <z-card-header>
+        <z-card-title>Bibliographic data</z-card-title>
+      </z-card-header>
+      <z-card-content>
+        <dl class="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <dt class="text-muted-foreground text-xs">Application number</dt>
+            <dd class="font-mono">{{ p.applicationNumber ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-muted-foreground text-xs">Filing date</dt>
+            <dd>{{ p.filingDate ? (p.filingDate | date: 'longDate') : '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-muted-foreground text-xs">Grant date</dt>
+            <dd>{{ p.grantDate ? (p.grantDate | date: 'longDate') : 'Not granted' }}</dd>
+          </div>
+          <div>
+            <dt class="text-muted-foreground text-xs">Priority date</dt>
+            <dd>{{ p.priorityDate ? (p.priorityDate | date: 'longDate') : '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-muted-foreground text-xs">Expiration date</dt>
+            <dd>{{ p.expirationDate ? (p.expirationDate | date: 'longDate') : '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-muted-foreground text-xs">Primary CPC</dt>
+            <dd class="font-mono">{{ p.primaryCpc ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-muted-foreground text-xs">Examiner</dt>
+            <dd>{{ p.examiner ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-muted-foreground text-xs">Art unit</dt>
+            <dd>{{ p.artUnit ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-muted-foreground text-xs">Last updated</dt>
+            <dd>{{ p.updatedAt ? (p.updatedAt | date: 'medium') : '—' }}</dd>
+          </div>
+          <div class="sm:col-span-2 lg:col-span-3">
+            <dt class="text-muted-foreground text-xs">Assignees</dt>
+            <dd>
+              @for (a of p.assignees; track $index) {
+                <div>
+                  <a [routerLink]="['/patents']" [queryParams]="{ assignee: a.name }" class="hover:underline">{{ a.name }}</a>
+                  @if (place(a)) {
+                    <span class="text-muted-foreground"> — {{ place(a) }}</span>
+                  }
+                </div>
+              } @empty {
+                —
+              }
+            </dd>
+          </div>
+          <div class="sm:col-span-2 lg:col-span-3">
+            <dt class="text-muted-foreground text-xs">Inventors</dt>
+            <dd class="flex flex-wrap gap-x-4 gap-y-1">
+              @for (i of p.inventors; track $index) {
+                <span>
+                  <a [routerLink]="['/patents']" [queryParams]="{ inventor: i.name }" class="hover:underline">{{ i.name }}</a>
+                  @if (place(i)) {
+                    <span class="text-muted-foreground text-xs"> ({{ place(i) }})</span>
+                  }
+                </span>
+              } @empty {
+                —
+              }
+            </dd>
+          </div>
+        </dl>
+      </z-card-content>
+    </z-card>
+
+    <div class="grid gap-6 lg:grid-cols-[1fr_20rem]">
+      <div class="min-w-0 space-y-6">
+        <section aria-labelledby="abstract-h" class="space-y-2">
+          <h2 id="abstract-h" class="text-lg font-semibold">Abstract</h2>
+          <p class="text-pretty leading-relaxed">{{ p.abstract ?? p.abstractSnippet ?? 'No abstract available.' }}</p>
+        </section>
+
+        <section aria-labelledby="claims-h" class="space-y-3">
+          <div class="flex items-baseline justify-between gap-2">
+            <h2 id="claims-h" class="text-lg font-semibold">Claims</h2>
+            <span class="text-muted-foreground text-sm">{{ claims().length }} claims · {{ independentCount() }} independent</span>
+          </div>
+          <ol class="space-y-2" aria-label="Claims">
+            @for (c of claims(); track c.number) {
+              <li
+                [id]="'claim-' + c.number"
+                class="rounded-lg border p-3 text-sm leading-relaxed"
+                [class]="c.independent ? 'bg-card border-primary/40' : 'border-dashed'"
+                [style.margin-left.rem]="c.depth * 1.5"
+              >
+                <div class="mb-1 flex items-center gap-2">
+                  <span class="font-mono text-xs font-semibold">{{ c.number }}.</span>
+                  @if (c.independent) {
+                    <z-badge zType="secondary" class="text-[10px]">Independent</z-badge>
+                  } @else if (c.dependsOn !== null) {
+                    <a [href]="'#claim-' + c.dependsOn" class="text-muted-foreground text-xs hover:underline">depends on claim {{ c.dependsOn }}</a>
+                  }
+                </div>
+                <p>{{ c.text }}</p>
+              </li>
+            } @empty {
+              <li class="text-muted-foreground text-sm">No claims on record.</li>
+            }
+          </ol>
+        </section>
+      </div>
+
+      <aside class="space-y-6">
+        <z-card>
+          <z-card-header>
+            <z-card-title class="text-base">CPC classification</z-card-title>
+          </z-card-header>
+          <z-card-content>
+            <ul class="flex flex-wrap gap-1.5">
+              @for (code of p.cpcCodes; track code) {
+                <li>
+                  <a
+                    z-badge
+                    zType="outline"
+                    class="font-mono"
+                    [class.border-primary]="code === p.primaryCpc"
+                    [routerLink]="['/patents']"
+                    [queryParams]="{ cpc: code.slice(0, 4) }"
+                    [attr.aria-label]="'Search CPC ' + code.slice(0, 4)"
+                    >{{ code }}</a
+                  >
+                </li>
+              } @empty {
+                <li class="text-muted-foreground text-sm">None</li>
+              }
+            </ul>
+          </z-card-content>
+        </z-card>
+
+        <z-card>
+          <z-card-header>
+            <z-card-title class="text-base">Citations ({{ p.citations.length }})</z-card-title>
+          </z-card-header>
+          <z-card-content>
+            <ul class="divide-y text-sm">
+              @for (c of p.citations; track c.patentNumber) {
+                <li class="flex items-center justify-between gap-2 py-1.5">
+                  <a [routerLink]="['/patents', c.patentNumber]" class="text-primary font-mono text-xs hover:underline">{{ c.patentNumber }}</a>
+                  <span class="text-muted-foreground text-xs">{{ c.citedBy === 'EXAMINER' ? 'Examiner' : 'Applicant' }}</span>
+                </li>
+              } @empty {
+                <li class="text-muted-foreground py-1">No citations.</li>
+              }
+            </ul>
+          </z-card-content>
+        </z-card>
+      </aside>
+    </div>
+
+    <ng-template #jsonTpl>
+      <div class="flex justify-end">
+        <app-copy-button [value]="json()" label="Copy JSON" type="outline" />
+      </div>
+      <app-json-viewer [value]="patent.value()" [ariaLabel]="p.patentNumber + ' JSON'" />
+    </ng-template>
+  }
+</div>

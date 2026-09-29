@@ -1,0 +1,29 @@
+openapi: 3.0.1
+info:
+  title: OpenPTO public API
+  version: v1
+x-amazon-apigateway-api-key-source: HEADER
+components:
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: x-api-key
+      in: header
+paths:
+  /api/v1/{proxy+}:
+    x-amazon-apigateway-any-method:
+      security:
+        - api_key: []
+      parameters:
+        - name: proxy
+          in: path
+          required: true
+          schema: { type: string }
+      x-amazon-apigateway-integration:
+        type: http_proxy
+        httpMethod: ANY
+        connectionType: VPC_LINK
+        connectionId: ${vpc_link_id}
+        uri: http://${alb_dns}/api/v1/{proxy}
+        requestParameters:
+          integration.request.path.proxy: method.request.path.proxy

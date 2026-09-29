@@ -1,0 +1,91 @@
+plugins {
+	id 'java'
+	id 'jacoco'
+	id 'org.springframework.boot' version '4.1.1'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'gov.openpto'
+version = '0.0.1-SNAPSHOT'
+description = 'OpenPTO fee calculation service'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-cache'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-flyway'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'org.flywaydb:flyway-database-postgresql'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0'
+	compileOnly 'org.projectlombok:lombok'
+	runtimeOnly 'org.postgresql:postgresql'
+	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-cache-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-flyway-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	// Characterization tests compare the extracted service against the legacy monolith code.
+	testImplementation project(':legacy-fee-monolith')
+	testCompileOnly 'org.projectlombok:lombok'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+	finalizedBy tasks.named('jacocoTestReport')
+	testLogging {
+		events 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+// Coverage: full report for the whole service, hard gate (>= 90% lines) on the pure calculation core.
+def domainClasses = { dirs -> files(dirs.collect { fileTree(dir: it, include: 'gov/openpto/fee/domain/**') }) }
+
+tasks.named('jacocoTestReport') {
+	dependsOn tasks.named('test')
+	reports {
+		xml.required = true
+		html.required = true
+	}
+}
+
+tasks.named('jacocoTestCoverageVerification') {
+	dependsOn tasks.named('test')
+	classDirectories.setFrom(domainClasses(sourceSets.main.output.classesDirs.files))
+	violationRules {
+		rule {
+			limit {
+				counter = 'LINE'
+				value = 'COVEREDRATIO'
+				minimum = 0.90
+			}
+		}
+	}
+}
+
+tasks.named('check') {
+	dependsOn tasks.named('jacocoTestCoverageVerification')
+}
+
+// Only the executable boot jar is needed (Dockerfile extracts its layers).
+tasks.named('jar') {
+	enabled = false
+}

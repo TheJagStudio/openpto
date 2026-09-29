@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>OpenPTO — open patent &amp; trademark data</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="OpenPTO: free, open access to patent and trademark data — search, fee calculator, XML to JSON pipeline and a developer API.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="alternate icon" type="image/x-icon" href="favicon.ico">
+  <script>
+    // Apply the persisted theme before first paint (no flash). Mirrors ZardDarkMode ('theme' key).
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        var dark = t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) document.documentElement.classList.add('dark');
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <app-root></app-root>
+  <noscript>OpenPTO requires JavaScript. The public API is documented at /swagger-ui.html.</noscript>
+</body>
+</html>

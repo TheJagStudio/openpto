@@ -1,0 +1,96 @@
+plugins {
+	id 'java-library'
+	id 'jacoco'
+}
+
+group = 'gov.openpto'
+version = '0.0.1-SNAPSHOT'
+description = 'Plain Java USPTO XML -> JSON transformer, packaged as an AWS Lambda (S3 event) handler'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+configurations {
+	// Extra jars only needed when the function actually runs inside AWS Lambda.
+	lambdaRuntime
+}
+
+dependencies {
+	// Version alignment only (no Spring code on the classpath).
+	api platform('org.springframework.boot:spring-boot-dependencies:4.1.1')
+
+	api 'tools.jackson.core:jackson-databind'
+	api 'com.amazonaws:aws-lambda-java-core:1.2.3'
+	api 'com.amazonaws:aws-lambda-java-events:3.14.0'
+
+	compileOnly platform('software.amazon.awssdk:bom:2.31.0')
+	compileOnly 'software.amazon.awssdk:s3'
+	lambdaRuntime platform('software.amazon.awssdk:bom:2.31.0')
+	lambdaRuntime 'software.amazon.awssdk:s3'
+
+	testImplementation 'org.junit.jupiter:junit-jupiter'
+	testImplementation 'org.assertj:assertj-core'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+	maxHeapSize = '512m'
+	systemProperty 'samples.dir', rootProject.file('samples').absolutePath
+	inputs.dir(rootProject.file('samples'))
+	finalizedBy tasks.named('jacocoTestReport')
+}
+
+tasks.named('jacocoTestReport') {
+	dependsOn tasks.named('test')
+	reports {
+		xml.required = true
+		html.required = true
+	}
+	classDirectories.setFrom(files(sourceSets.main.output.classesDirs.collect {
+		fileTree(dir: it, exclude: ['**/lambda/S3ObjectIO*'])
+	}))
+}
+
+tasks.named('jacocoTestCoverageVerification') {
+	dependsOn tasks.named('jacocoTestReport')
+	violationRules {
+		rule {
+			limit {
+				counter = 'LINE'
+				minimum = 0.80
+			}
+		}
+	}
+	classDirectories.setFrom(tasks.named('jacocoTestReport').get().classDirectories)
+}
+
+tasks.named('check') {
+	dependsOn tasks.named('jacocoTestCoverageVerification')
+}
+
+// AWS Lambda deployment package (Java zip layout: classes at the root, dependencies in lib/).
+// Built only, never deployed:  .\gradlew.bat :transform-lambda:lambdaZip
+tasks.register('lambdaZip', Zip) {
+	group = 'build'
+	description = 'Builds the AWS Lambda deployment zip for the transform function.'
+	archiveFileName = "openpto-transform-lambda-${project.version}.zip"
+	destinationDirectory = layout.buildDirectory.dir('distributions')
+	from tasks.named('compileJava')
+	from tasks.named('processResources')
+	into('lib') {
+		from configurations.runtimeClasspath
+		from configurations.lambdaRuntime
+	}
+}
+
+tasks.named('assemble') {
+	dependsOn tasks.named('lambdaZip')
+}

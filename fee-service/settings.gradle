@@ -1,0 +1,4 @@
+rootProject.name = 'fee-service'
+
+// Pre-extraction procedural fee code, kept only as the oracle for characterization tests.
+include 'legacy-fee-monolith'

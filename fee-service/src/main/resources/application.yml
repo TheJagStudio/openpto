@@ -1,0 +1,71 @@
+spring:
+  application:
+    name: fee-service
+  threads:
+    virtual:
+      enabled: true
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/openpto}
+    username: ${DB_USER:openpto}
+    password: ${DB_PASSWORD:openpto}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      pool-name: fee-pool
+  flyway:
+    schemas: fees
+    default-schema: fees
+    create-schemas: true
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: fees
+  cache:
+    cache-names: feeSchedules
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: ${PORT:8082}
+  shutdown: graceful
+  error:
+    include-stacktrace: never
+    include-message: never
+
+app:
+  fees:
+    # USPTO fee dates are Eastern Time; "today" for default schedule selection uses this zone.
+    zone: ${FEES_ZONE:America/New_York}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: fee-service
+    description: OpenPTO decoupled fee calculator
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{requestId:-}]"

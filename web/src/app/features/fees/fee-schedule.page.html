@@ -1,0 +1,117 @@
+<div class="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+  <app-breadcrumbs [items]="[{ label: 'Fees', link: '/fees' }, { label: 'Fee schedule' }]" />
+  <app-page-header
+    eyebrow="Reference"
+    heading="Fee schedule"
+    description="Current and prior fee amounts by entity size. Small-entity fees are generally 40% and micro-entity fees 20% of the large-entity amount."
+  >
+    <div actions class="flex gap-2">
+      <button type="button" z-button zType="outline" (click)="print()"><ng-icon name="lucidePrinter" aria-hidden="true" /> Print</button>
+      <a z-button routerLink="/fees"><ng-icon name="lucideCalculator" aria-hidden="true" /> Calculator</a>
+    </div>
+  </app-page-header>
+
+  <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between print:hidden">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <div role="tablist" aria-label="Fee category" class="bg-muted inline-flex rounded-lg p-1">
+        @for (c of ['PATENT', 'TRADEMARK']; track c) {
+          <button
+            type="button"
+            role="tab"
+            [attr.aria-selected]="selectedCategory() === c"
+            class="focus-visible:ring-ring/50 rounded-md px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2"
+            [class]="selectedCategory() === c ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+            (click)="setParam('category', c)"
+          >
+            {{ c === 'PATENT' ? 'Patent fees' : 'Trademark fees' }}
+          </button>
+        }
+      </div>
+      <z-select class="w-full sm:w-64" zAriaLabel="Fee schedule version" [zValue]="code() || 'current'" (zSelectionChange)="setParam('code', $event)">
+        <z-select-item zValue="current">Current schedule</z-select-item>
+        @if (schedules.hasValue()) {
+          @for (s of schedules.value(); track s.code) {
+            <z-select-item [zValue]="s.code">{{ s.code }} — {{ s.name }}</z-select-item>
+          }
+        }
+      </z-select>
+    </div>
+    <div class="relative w-full md:w-72">
+      <label for="fee-filter" class="sr-only">Filter fees</label>
+      <ng-icon name="lucideSearch" class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" aria-hidden="true" />
+      <input
+        id="fee-filter"
+        z-input
+        type="search"
+        class="pl-9"
+        placeholder="Filter by code or description"
+        [value]="filter()"
+        (input)="filter.set($any($event.target).value)"
+      />
+    </div>
+  </div>
+
+  @if (schedule.isLoading() && !schedule.hasValue()) {
+    <div class="space-y-3" aria-busy="true">
+      <z-skeleton class="h-6 w-64" />
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <z-skeleton class="h-10 w-full" />
+      }
+    </div>
+  } @else if (schedule.error()) {
+    <app-error-state [error]="schedule.error()" (retry)="schedule.reload()" />
+  } @else if (schedule.hasValue()) {
+    @let s = schedule.value();
+    <div class="bg-muted/40 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border px-4 py-3 text-sm">
+      <span class="font-semibold">{{ s.name }}</span>
+      <z-badge zType="outline">{{ s.code }}</z-badge>
+      @if (s.current) {
+        <z-badge>In effect</z-badge>
+      }
+      <span class="text-muted-foreground">
+        Effective {{ s.effectiveFrom | date: 'longDate' }}
+        @if (s.effectiveTo) {
+          – {{ s.effectiveTo | date: 'longDate' }}
+        }
+      </span>
+      <span class="text-muted-foreground ml-auto" role="status" aria-live="polite">{{ matchCount() }} fees</span>
+    </div>
+
+    @for (g of groups(); track g.group) {
+      <section class="print:break-inside-avoid space-y-2" [attr.aria-labelledby]="'grp-' + $index">
+        <h2 [id]="'grp-' + $index" class="border-primary border-l-4 pl-3 text-lg font-semibold">{{ humanize(g.group) }}</h2>
+        <div class="overflow-x-auto rounded-lg border">
+          <table z-table class="min-w-[40rem]">
+            <thead z-table-header>
+              <tr z-table-row class="bg-muted/50">
+                <th z-table-head scope="col" class="w-24">Fee code</th>
+                <th z-table-head scope="col">Description</th>
+                <th z-table-head scope="col" class="w-32 text-right">Fee</th>
+                <th z-table-head scope="col" class="w-32 text-right">Small entity fee</th>
+                <th z-table-head scope="col" class="w-32 text-right">Micro entity fee</th>
+              </tr>
+            </thead>
+            <tbody z-table-body>
+              @for (item of g.rows; track item.feeCode) {
+                <tr z-table-row>
+                  <td z-table-cell class="font-mono text-xs">{{ item.feeCode }}</td>
+                  <td z-table-cell class="whitespace-normal">
+                    {{ item.description }}
+                    @if (unitLabel[item.unit]) {
+                      <span class="text-muted-foreground text-xs">({{ unitLabel[item.unit] }})</span>
+                    }
+                  </td>
+                  <td z-table-cell class="tabular text-right">{{ item.largeEntity === null ? '—' : (item.largeEntity | currency: 'USD') }}</td>
+                  <td z-table-cell class="tabular text-right">{{ item.smallEntity === null ? '—' : (item.smallEntity | currency: 'USD') }}</td>
+                  <td z-table-cell class="tabular text-right">{{ item.microEntity === null ? '—' : (item.microEntity | currency: 'USD') }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    } @empty {
+      <z-empty class="rounded-lg border border-dashed py-12" zIcon="lucideSearch" zTitle="No fees match" [zDescription]="'Nothing matches “' + filter() + '” in this schedule.'" />
+    }
+  }
+</div>

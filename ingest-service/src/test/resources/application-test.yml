@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5433/openpto_test}
+    username: ${DB_USER:openpto}
+    password: ${DB_PASSWORD:openpto}
+    hikari:
+      maximum-pool-size: 5
+
+app:
+  storage:
+    root: build/test-buckets
+  odp:
+    initial-backoff: 10ms
+  ingest:
+    shutdown-wait: 10s

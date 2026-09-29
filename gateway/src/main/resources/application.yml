@@ -1,0 +1,109 @@
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+  # the gateway computes X-Forwarded-* itself (see gateway.trusted-proxies)
+  forward-headers-strategy: none
+
+spring:
+  application:
+    name: gateway
+  threads:
+    virtual:
+      enabled: true
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  mvc:
+    problemdetails:
+      enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWKS_URI:http://localhost:8081/.well-known/jwks.json}
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          # flush-per-chunk for these types; everything else is copied as a stream (never buffered whole)
+          streaming-media-types:
+            - text/event-stream
+            - application/x-ndjson
+            - text/csv
+          streaming-buffer-size: 16384
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: OpenPTO API gateway
+    aws-equivalent: Amazon API Gateway (API keys, usage plans, throttling)
+
+gateway:
+  internal-token: ${INTERNAL_TOKEN:dev-internal-token-change-me}
+  jwt-issuer: openpto
+  # base URL written into aggregated OpenAPI "servers"; empty = derived from the request
+  public-base-url: ${GATEWAY_PUBLIC_URL:}
+  # peers whose X-Forwarded-For is believed (IPs or CIDRs); default: trust nobody
+  trusted-proxies: ${TRUSTED_PROXIES:}
+  cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+  status-timeout: 2s
+  services:
+    odp:
+      display-name: odp-service
+      url: ${ODP_URL:http://localhost:8081}
+      connect-timeout: 2s
+      read-timeout: 30s
+    fees:
+      display-name: fee-service
+      url: ${FEE_URL:http://localhost:8082}
+      connect-timeout: 2s
+      read-timeout: 15s
+    ingest:
+      display-name: ingest-service
+      url: ${INGEST_URL:http://localhost:8083}
+      connect-timeout: 2s
+      read-timeout: 60s
+  # per-route overrides of the service read timeout (route ids: odp-data, odp-datasets, odp-accounts, fees, ingest)
+  route-read-timeouts:
+    odp-datasets: 120s
+    ingest: 180s
+  rate-limit:
+    enabled: true
+    tiers:
+      ANONYMOUS: { per-minute: 30, per-day: 1000 }
+      FREE: { per-minute: 120, per-day: 20000 }
+      WEB: { per-minute: 300, per-day: 50000 }
+      ADMIN: { per-minute: 1200, per-day: 1000000 }
+    auth-per-minute: 10
+    bucket-idle-expiry: 25h
+    max-buckets: 200000
+  api-keys:
+    positive-ttl: 60s
+    negative-ttl: 10s
+    max-entries: 50000
+  usage:
+    enabled: true
+    flush-interval-ms: 30000
+    max-pending-entries: 50000
+    batch-size: 1000
+  circuit-breaker:
+    failure-threshold: 5
+    open-duration: 10s
+
+logging:
+  pattern:
+    correlation: "[%X{requestId:-}] "
+  include-application-name: false
+  level:
+    gov.openpto.gateway.access: INFO

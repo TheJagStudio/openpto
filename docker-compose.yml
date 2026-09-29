@@ -1,0 +1,68 @@
+# Optional container run (requires Docker Desktop). The primary local path is .\dev.ps1 up,
+# which uses the portable toolchain in D:\JavaSpring\tools and needs no Docker.
+name: openpto
+
+x-java-env: &java-env
+  DB_URL: jdbc:postgresql://postgres:5432/openpto
+  DB_USER: openpto
+  DB_PASSWORD: openpto
+  INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token-change-me}
+  SPRING_PROFILES_ACTIVE: dev
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: openpto
+      POSTGRES_USER: openpto
+      POSTGRES_PASSWORD: openpto
+    ports: ["5433:5432"]
+    volumes: [pgdata:/var/lib/postgresql]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openpto"]
+      interval: 5s
+      retries: 20
+
+  odp-service:
+    build: ./odp-service
+    environment:
+      <<: *java-env
+      JWT_KEY_DIR: /data/keys
+    volumes: [keys:/data/keys]
+    depends_on: { postgres: { condition: service_healthy } }
+
+  fee-service:
+    build: ./fee-service
+    environment: *java-env
+    depends_on: { postgres: { condition: service_healthy } }
+
+  ingest-service:
+    build: ./ingest-service
+    environment:
+      <<: *java-env
+      ODP_BASE_URL: http://odp-service:8081
+      JWKS_URI: http://odp-service:8081/.well-known/jwks.json
+      STORAGE_ROOT: /data/buckets
+    volumes: [buckets:/data/buckets]
+    depends_on: [odp-service]
+
+  gateway:
+    build: ./gateway
+    environment:
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token-change-me}
+      ODP_URL: http://odp-service:8081
+      FEE_URL: http://fee-service:8082
+      INGEST_URL: http://ingest-service:8083
+      JWKS_URI: http://odp-service:8081/.well-known/jwks.json
+    ports: ["8080:8080"]
+    depends_on: [odp-service, fee-service, ingest-service]
+
+  web:
+    build: ./web
+    ports: ["4200:8080"]
+    depends_on: [gateway]
+
+volumes:
+  pgdata: {}
+  keys: {}
+  buckets: {}

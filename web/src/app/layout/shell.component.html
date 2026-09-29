@@ -1,0 +1,183 @@
+<a
+  href="#main"
+  class="bg-primary text-primary-foreground sr-only z-[60] rounded-md px-3 py-2 text-sm font-medium focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+  >Skip to content</a
+>
+
+<header class="bg-background/85 supports-backdrop-filter:bg-background/70 sticky top-0 z-40 border-b backdrop-blur print:hidden">
+  <div class="mx-auto flex h-14 max-w-7xl items-center gap-2 px-4 sm:px-6">
+    <button
+      type="button"
+      z-button
+      zType="ghost"
+      zSize="icon"
+      class="lg:hidden"
+      aria-label="Open navigation menu"
+      (click)="openMobileNav()"
+    >
+      <ng-icon name="lucideMenu" aria-hidden="true" />
+    </button>
+
+    <a routerLink="/" class="focus-visible:ring-ring/50 mr-2 flex items-center gap-2 rounded-md outline-none focus-visible:ring-2" aria-label="OpenPTO home">
+      <span class="bg-primary text-primary-foreground grid size-7 place-items-center rounded-md shadow-sm">
+        <ng-icon name="lucideLandmark" class="size-4" aria-hidden="true" />
+      </span>
+      <span class="text-[15px] font-semibold tracking-tight">OpenPTO</span>
+    </a>
+
+    <nav aria-label="Primary" class="hidden lg:block">
+      <ul class="flex items-center gap-0.5">
+        @for (item of nav; track item.path) {
+          <li>
+            <a
+              [routerLink]="item.path"
+              routerLinkActive="bg-muted text-foreground"
+              ariaCurrentWhenActive="page"
+              class="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 rounded-md px-3 py-1.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2"
+              >{{ item.label }}</a
+            >
+          </li>
+        }
+      </ul>
+    </nav>
+
+    <div class="ml-auto flex items-center gap-1">
+      <app-theme-toggle />
+
+      @if (auth.user(); as user) {
+        <button
+          type="button"
+          z-dropdown
+          [zDropdownMenu]="userMenu"
+          class="focus-visible:ring-ring/50 ml-1 rounded-full outline-none focus-visible:ring-2"
+          [attr.aria-label]="'Account menu for ' + user.displayName"
+        >
+          <z-avatar [zFallback]="auth.initials()" zSize="sm" [zAlt]="user.displayName" />
+        </button>
+        <z-dropdown-menu-content #userMenu="zDropdownMenuContent" zAlign="end" class="w-60">
+          <z-dropdown-menu-label>
+            <div class="flex flex-col">
+              <span class="truncate text-sm font-medium">{{ user.displayName }}</span>
+              <span class="text-muted-foreground truncate text-xs font-normal">{{ user.email }}</span>
+            </div>
+          </z-dropdown-menu-label>
+          <z-dropdown-menu-separator />
+          <z-dropdown-menu-item (click)="go('/developers')">
+            <ng-icon name="lucideKey" aria-hidden="true" /> API keys &amp; usage
+          </z-dropdown-menu-item>
+          <z-dropdown-menu-item (click)="go('/pipeline')">
+            <ng-icon name="lucideDatabase" aria-hidden="true" /> My ingest jobs
+          </z-dropdown-menu-item>
+          @if (auth.isAdmin()) {
+            <z-dropdown-menu-item (click)="go('/admin')">
+              <ng-icon name="lucideShield" aria-hidden="true" /> Admin console
+            </z-dropdown-menu-item>
+          }
+          <z-dropdown-menu-separator />
+          <z-dropdown-menu-item (click)="logout()">
+            <ng-icon name="lucideLogOut" aria-hidden="true" /> Sign out
+          </z-dropdown-menu-item>
+        </z-dropdown-menu-content>
+      } @else {
+        <a z-button zType="ghost" routerLink="/login" [queryParams]="loginQuery()" class="hidden sm:inline-flex">Sign in</a>
+        <a z-button routerLink="/register">Get started</a>
+      }
+    </div>
+  </div>
+</header>
+
+<main id="main" tabindex="-1" class="flex-1 outline-none">
+  <router-outlet />
+</main>
+
+<footer class="bg-muted/30 border-t print:hidden">
+  <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-4">
+    <div class="space-y-2 md:col-span-2">
+      <div class="flex items-center gap-2">
+        <span class="bg-primary text-primary-foreground grid size-6 place-items-center rounded">
+          <ng-icon name="lucideLandmark" class="size-3.5" aria-hidden="true" />
+        </span>
+        <span class="font-semibold">OpenPTO</span>
+      </div>
+      <p class="text-muted-foreground max-w-md text-sm">
+        A free, open portal for patent and trademark data — modern APIs over legacy formats. Data shown is mock and
+        illustrative; fee amounts are modeled on the USPTO schedule and are not legal or financial advice.
+      </p>
+    </div>
+    <nav aria-label="Product" class="text-sm">
+      <h2 class="mb-2 font-medium">Product</h2>
+      <ul class="text-muted-foreground space-y-1.5">
+        <li><a routerLink="/patents" class="hover:text-foreground">Patent search</a></li>
+        <li><a routerLink="/trademarks" class="hover:text-foreground">Trademark status</a></li>
+        <li><a routerLink="/fees" class="hover:text-foreground">Fee calculator</a></li>
+        <li><a routerLink="/fees/schedule" class="hover:text-foreground">Fee schedule</a></li>
+      </ul>
+    </nav>
+    <nav aria-label="Developers" class="text-sm">
+      <h2 class="mb-2 font-medium">Developers</h2>
+      <ul class="text-muted-foreground space-y-1.5">
+        <li><a routerLink="/developers" class="hover:text-foreground">API keys</a></li>
+        <li><a href="/swagger-ui.html" target="_blank" rel="noopener" class="hover:text-foreground">API reference</a></li>
+        <li><a routerLink="/pipeline" class="hover:text-foreground">Data pipeline</a></li>
+        <li><a routerLink="/status" class="hover:text-foreground">System status</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="text-muted-foreground mx-auto max-w-7xl border-t px-4 py-4 text-xs sm:px-6">
+    © {{ year }} OpenPTO · Open data, open source.
+  </div>
+</footer>
+
+<z-sonner position="bottom-right" [closeButton]="true" [richColors]="true" />
+
+<ng-template #mobileNav let-sheetRef="sheetRef">
+  <nav aria-label="Mobile" class="-mt-2 px-2 pb-4">
+    <ul class="space-y-0.5">
+      <li>
+        <a
+          routerLink="/"
+          routerLinkActive="bg-muted text-foreground"
+          [routerLinkActiveOptions]="{ exact: true }"
+          ariaCurrentWhenActive="page"
+          class="text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium"
+          (click)="sheetRef.close()"
+        >
+          <ng-icon name="lucideLandmark" aria-hidden="true" /> Home
+        </a>
+      </li>
+      @for (item of nav; track item.path) {
+        <li>
+          <a
+            [routerLink]="item.path"
+            routerLinkActive="bg-muted text-foreground"
+            ariaCurrentWhenActive="page"
+            class="text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium"
+            (click)="sheetRef.close()"
+          >
+            <ng-icon [name]="item.icon" aria-hidden="true" />
+            <span class="flex flex-col">
+              <span>{{ item.label }}</span>
+              <span class="text-muted-foreground text-xs font-normal">{{ item.description }}</span>
+            </span>
+          </a>
+        </li>
+      }
+    </ul>
+    <div class="mt-4 border-t pt-4">
+      @if (auth.isAuthenticated()) {
+        @if (auth.isAdmin()) {
+          <a routerLink="/admin" class="hover:bg-muted flex items-center gap-3 rounded-md px-3 py-2 text-sm" (click)="sheetRef.close()">
+            <ng-icon name="lucideShield" aria-hidden="true" /> Admin console
+          </a>
+        }
+        <button type="button" class="hover:bg-muted flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm" (click)="sheetRef.close(); logout()">
+          <ng-icon name="lucideLogOut" aria-hidden="true" /> Sign out
+        </button>
+      } @else {
+        <a routerLink="/login" class="hover:bg-muted flex items-center gap-3 rounded-md px-3 py-2 text-sm" (click)="sheetRef.close()">
+          <ng-icon name="lucideLogIn" aria-hidden="true" /> Sign in
+        </a>
+      }
+    </div>
+  </nav>
+</ng-template>

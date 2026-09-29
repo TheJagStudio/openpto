@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5433/openpto_test}
+    hikari:
+      maximum-pool-size: 5
+  jpa:
+    properties:
+      hibernate:
+        generate_statistics: true
+  flyway:
+    # openpto_test is shared by every service's tests; only ever touch our own schema.
+    clean-disabled: true
+
+app:
+  jwt:
+    key-dir: build/test-keys
+  admin:
+    enabled: false
+  seed:
+    enabled: false
+
+logging:
+  level:
+    root: warn
+    gov.openpto: info

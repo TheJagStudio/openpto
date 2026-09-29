@@ -1,0 +1,16 @@
+// Legacy "monolith" fee code, lifted verbatim from the pre-extraction system.
+// It is NOT deployed; the fee-service characterization tests use it as an oracle.
+plugins {
+	id 'java-library'
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	// Legacy code: raw types / Date APIs are intentional, keep the build quiet.
+	options.compilerArgs += ['-Xlint:-rawtypes', '-Xlint:-unchecked', '-Xlint:-deprecation']
+}

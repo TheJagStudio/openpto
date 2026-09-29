@@ -1,0 +1,196 @@
+<div class="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6">
+  <app-page-header
+    eyebrow="Data pipeline"
+    heading="Legacy XML → JSON"
+    description="Upload USPTO bulk files (grant & application XML, legacy PATDOC, trademark dailies). Each file is stored, parsed securely, transformed to JSON and loaded into the open dataset."
+  />
+
+  <div class="grid gap-6 lg:grid-cols-5">
+    <!-- Upload -->
+    <z-card class="lg:col-span-3">
+      <z-card-header>
+        <z-card-title>Upload files</z-card-title>
+        <z-card-description>
+          Up to {{ limits.maxFiles }} files · .xml or .zip · {{ formatBytes(limits.maxBytes) }} each
+        </z-card-description>
+      </z-card-header>
+      <z-card-content class="space-y-4">
+        <label
+          for="ingest-files"
+          class="focus-within:ring-ring/50 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors focus-within:ring-2"
+          [class]="dragging() ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'"
+          (dragover)="onDragOver($event)"
+          (dragleave)="dragging.set(false)"
+          (drop)="onDrop($event)"
+        >
+          <span class="bg-primary/10 text-primary grid size-12 place-items-center rounded-full">
+            <ng-icon name="lucideCloudUpload" class="size-6" aria-hidden="true" />
+          </span>
+          <span class="font-medium">Drag &amp; drop files here, or <span class="text-primary underline">browse</span></span>
+          <span class="text-muted-foreground text-xs">Concatenated multi-document XML files are supported.</span>
+          <input id="ingest-files" type="file" class="sr-only" multiple accept=".xml,.zip,application/xml,text/xml,application/zip" (change)="onPick($event)" />
+        </label>
+
+        @if (rejected().length) {
+          <ul class="space-y-1 rounded-lg border border-red-600/20 bg-red-50 p-3 text-sm text-red-800 dark:bg-red-500/10 dark:text-red-300" role="alert">
+            @for (r of rejected(); track r.name) {
+              <li><span class="font-medium">{{ r.name }}</span> — {{ r.reason }}</li>
+            }
+          </ul>
+        }
+
+        @if (selected().length) {
+          <ul class="divide-y rounded-lg border" aria-label="Selected files">
+            @for (f of selected(); track f.name + $index; let i = $index) {
+              <li class="flex items-center gap-3 px-3 py-2 text-sm">
+                <ng-icon [name]="f.name.toLowerCase().endsWith('.zip') ? 'lucideFileArchive' : 'lucideFileCode'" class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+                <span class="min-w-0 flex-1 truncate">{{ f.name }}</span>
+                <span class="tabular text-muted-foreground text-xs">{{ formatBytes(f.size) }}</span>
+                <button type="button" z-button zType="ghost" zSize="icon-sm" [attr.aria-label]="'Remove ' + f.name" [zDisabled]="uploading()" (click)="remove(i)">
+                  <ng-icon name="lucideX" aria-hidden="true" />
+                </button>
+              </li>
+            }
+          </ul>
+        }
+
+        @if (uploading()) {
+          <div class="space-y-1" role="status" aria-live="polite">
+            <div class="flex justify-between text-xs">
+              <span>{{ trying() ? 'Uploading sample ' + trying() : 'Uploading…' }}</span>
+              <span class="tabular">{{ progress() }}%</span>
+            </div>
+            <z-progress [value]="progress()" aria-label="Upload progress" />
+          </div>
+        }
+      </z-card-content>
+      <z-card-footer class="justify-between gap-2">
+        <span class="text-muted-foreground text-xs">
+          @if (selected().length) {
+            {{ selected().length }} file(s) · {{ formatBytes(totalSize()) }}
+          }
+        </span>
+        <button type="button" z-button [zDisabled]="!selected().length || uploading()" [zLoading]="uploading() && !trying()" (click)="upload()">
+          <ng-icon name="lucideCloudUpload" aria-hidden="true" /> Upload &amp; process
+        </button>
+      </z-card-footer>
+    </z-card>
+
+    <!-- Samples -->
+    <z-card class="lg:col-span-2">
+      <z-card-header>
+        <z-card-title>Sample files</z-card-title>
+        <z-card-description>Real-world shapes, including one deliberately malformed file.</z-card-description>
+      </z-card-header>
+      <z-card-content>
+        @if (samples.isLoading()) {
+          <div class="space-y-2">
+            @for (i of [1, 2, 3, 4]; track i) {
+              <z-skeleton class="h-12 w-full" />
+            }
+          </div>
+        } @else if (samples.error()) {
+          <app-error-state [error]="samples.error()" (retry)="samples.reload()" />
+        } @else if (samples.hasValue()) {
+          <ul class="divide-y">
+            @for (s of samples.value(); track s.name) {
+              <li class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center">
+                <div class="min-w-0 flex-1">
+                  <p class="truncate font-mono text-xs font-medium">{{ s.name }}</p>
+                  <p class="text-muted-foreground text-xs">{{ s.description }}</p>
+                  <p class="text-muted-foreground text-[11px]">{{ humanize(s.format) }} · {{ formatBytes(s.sizeBytes) }}</p>
+                </div>
+                <div class="flex shrink-0 gap-1">
+                  <a z-button zType="ghost" zSize="icon-sm" [href]="sampleUrl(s.name)" download [attr.aria-label]="'Download ' + s.name">
+                    <ng-icon name="lucideDownload" aria-hidden="true" />
+                  </a>
+                  <button type="button" z-button zType="outline" zSize="sm" [zLoading]="trying() === s.name" [zDisabled]="uploading()" (click)="trySample(s)">
+                    <ng-icon name="lucidePlay" aria-hidden="true" /> Try this sample
+                  </button>
+                </div>
+              </li>
+            } @empty {
+              <li class="text-muted-foreground text-sm">No samples published.</li>
+            }
+          </ul>
+        }
+      </z-card-content>
+    </z-card>
+  </div>
+
+  <!-- Jobs -->
+  <section aria-labelledby="jobs-h" class="space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <h2 id="jobs-h" class="text-lg font-semibold">Your ingest jobs</h2>
+        @if (hasActive()) {
+          <span class="text-muted-foreground flex items-center gap-1.5 text-xs" role="status">
+            <span class="size-2 animate-pulse rounded-full bg-violet-500" aria-hidden="true"></span> Live — refreshing every few seconds
+          </span>
+        }
+      </div>
+      <div class="flex items-center gap-2">
+        <z-select class="w-44" zAriaLabel="Filter by status" zPlaceholder="All statuses" [zValue]="statusFilter()" (zSelectionChange)="setStatus($event)">
+          <z-select-item zValue="">All statuses</z-select-item>
+          @for (s of statuses; track s) {
+            <z-select-item [zValue]="s">{{ humanize(s) }}</z-select-item>
+          }
+        </z-select>
+        <button type="button" z-button zType="outline" zSize="icon" aria-label="Refresh jobs" (click)="jobs.reload()">
+          <ng-icon name="lucideRefreshCw" [class.animate-spin]="jobs.isLoading()" aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+
+    @if (jobs.isLoading() && !jobs.hasValue()) {
+      <div class="space-y-2">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <z-skeleton class="h-12 w-full" />
+        }
+      </div>
+    } @else if (jobs.error()) {
+      <app-error-state [error]="jobs.error()" (retry)="jobs.reload()" />
+    } @else if (jobs.hasValue()) {
+      @let page = jobs.value();
+      @if (!page.content.length) {
+        <z-empty class="rounded-lg border border-dashed py-12" zIcon="lucideDatabase" zTitle="No jobs yet" zDescription="Upload a file or try one of the samples to see the pipeline in action." />
+      } @else {
+        <div class="overflow-x-auto rounded-lg border">
+          <table z-table class="min-w-[48rem]">
+            <thead z-table-header>
+              <tr z-table-row>
+                <th z-table-head scope="col">File</th>
+                <th z-table-head scope="col">Format</th>
+                <th z-table-head scope="col">Status</th>
+                <th z-table-head scope="col" class="text-right">Records</th>
+                <th z-table-head scope="col">Created</th>
+                <th z-table-head scope="col" class="text-right">Duration</th>
+              </tr>
+            </thead>
+            <tbody z-table-body>
+              @for (j of page.content; track j.id) {
+                <tr z-table-row>
+                  <td z-table-cell class="max-w-64">
+                    <a [routerLink]="['/pipeline/jobs', j.id]" class="text-primary block truncate font-medium hover:underline">{{ j.fileName }}</a>
+                    <span class="text-muted-foreground text-xs">{{ formatBytes(j.sizeBytes) }}</span>
+                  </td>
+                  <td z-table-cell class="text-xs">{{ humanize(j.documentFormat) }}</td>
+                  <td z-table-cell><app-status-badge [status]="j.status" /></td>
+                  <td z-table-cell class="tabular text-right text-xs">
+                    {{ j.recordsLoaded | number }} / {{ j.recordsTotal | number }}
+                    @if (j.recordsFailed) {
+                      <div class="text-destructive">{{ j.recordsFailed | number }} failed</div>
+                    }
+                  </td>
+                  <td z-table-cell class="text-muted-foreground text-xs">{{ j.createdAt | date: 'MMM d, h:mm:ss a' }}</td>
+                  <td z-table-cell class="tabular text-muted-foreground text-right text-xs">{{ formatDuration(j.durationMs) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-pager [page]="page.page" [totalPages]="page.totalPages" [size]="page.size" [totalElements]="page.totalElements" ariaLabel="Job pages" (pageChange)="goToPage($event)" />
+      }
+    }
+  </section>
+</div>

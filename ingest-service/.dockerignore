@@ -1,0 +1,5 @@
+.gradle
+build
+transform-lambda/build
+.idea
+*.iml

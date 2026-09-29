@@ -1,0 +1,138 @@
+<div class="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+  <app-page-header
+    eyebrow="Open Data"
+    heading="Trademark search"
+    description="Look up marks by text, owner or goods & services. Status reflects the latest prosecution event."
+  >
+    <a actions z-button zType="outline" zSize="sm" [href]="exportCsv()" download>
+      <ng-icon name="lucideDownload" aria-hidden="true" /> Export CSV
+    </a>
+  </app-page-header>
+
+  <z-card>
+    <z-card-content class="pt-4">
+      <form role="search" class="grid gap-3 md:grid-cols-6" (submit)="submit($event)">
+        <div class="relative md:col-span-3">
+          <label for="tm-q" class="sr-only">Search trademarks</label>
+          <ng-icon name="lucideSearch" class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" aria-hidden="true" />
+          <input
+            id="tm-q"
+            z-input
+            type="search"
+            autocomplete="off"
+            class="pl-9"
+            placeholder="Mark text, owner or goods — e.g. coffee"
+            [value]="qInput()"
+            (input)="qInput.set($any($event.target).value)"
+          />
+        </div>
+        <z-select class="md:col-span-1" zAriaLabel="Status" zPlaceholder="Any status" [zValue]="criteria().status ?? ''" (zSelectionChange)="onSelect('status', $event)">
+          <z-select-item zValue="">Any status</z-select-item>
+          @for (s of statuses; track s) {
+            <z-select-item [zValue]="s">{{ humanize(s) }}</z-select-item>
+          }
+        </z-select>
+        <z-select class="md:col-span-1" zAriaLabel="Nice class" zPlaceholder="Any class" [zValue]="criteria().niceClass ? '' + criteria().niceClass : ''" (zSelectionChange)="onSelect('niceClass', $event)">
+          <z-select-item zValue="">Any class</z-select-item>
+          @for (c of classes; track c) {
+            <z-select-item [zValue]="'' + c">Class {{ c }}</z-select-item>
+          }
+        </z-select>
+        <z-select class="md:col-span-1" zAriaLabel="Sort" zPlaceholder="Best match" [zValue]="criteria().sort ?? ''" (zSelectionChange)="onSelect('sort', $event)">
+          @for (o of sortOptions; track o.value) {
+            <z-select-item [zValue]="o.value">{{ o.label }}</z-select-item>
+          }
+        </z-select>
+        <div class="md:col-span-2">
+          <label for="tm-owner" class="sr-only">Owner</label>
+          <input id="tm-owner" z-input placeholder="Owner" [value]="criteria().owner ?? ''" (change)="onText('owner', $event)" />
+        </div>
+        <div class="grid grid-cols-2 gap-2 md:col-span-3">
+          <div>
+            <label for="tm-from" class="text-muted-foreground text-xs">Filed from</label>
+            <input id="tm-from" z-input type="date" [value]="criteria().filedFrom ?? ''" (change)="onText('filedFrom', $event)" />
+          </div>
+          <div>
+            <label for="tm-to" class="text-muted-foreground text-xs">Filed to</label>
+            <input id="tm-to" z-input type="date" [value]="criteria().filedTo ?? ''" (change)="onText('filedTo', $event)" />
+          </div>
+        </div>
+        <div class="flex items-end md:col-span-1">
+          @if (hasFilters()) {
+            <button type="button" z-button zType="ghost" class="w-full" (click)="clearAll()">
+              <ng-icon name="lucideX" aria-hidden="true" /> Clear
+            </button>
+          }
+        </div>
+      </form>
+    </z-card-content>
+  </z-card>
+
+  <p class="text-muted-foreground text-sm" role="status" aria-live="polite">
+    @if (results.isLoading()) {
+      Searching…
+    } @else if (results.hasValue()) {
+      {{ results.value().totalElements | number }} {{ results.value().totalElements === 1 ? 'trademark' : 'trademarks' }}
+    }
+  </p>
+
+  @if (results.isLoading() && !results.hasValue()) {
+    <div class="space-y-2" aria-hidden="true">
+      @for (i of [1, 2, 3, 4, 5, 6, 7, 8]; track i) {
+        <z-skeleton class="h-12 w-full" />
+      }
+    </div>
+  } @else if (results.error()) {
+    <app-error-state [error]="results.error()" (retry)="results.reload()" />
+  } @else if (results.hasValue()) {
+    @let page = results.value();
+    @if (!page.content.length) {
+      <z-empty class="rounded-lg border border-dashed py-12" zIcon="lucideStamp" zTitle="No trademarks match" zDescription="Try a different spelling, class or status.">
+        <button type="button" z-button zType="outline" zSize="sm" (click)="clearAll()">Clear search</button>
+      </z-empty>
+    } @else {
+      <div class="overflow-x-auto rounded-lg border" [class.opacity-60]="results.isLoading()">
+        <table z-table class="min-w-[44rem]">
+          <thead z-table-header>
+            <tr z-table-row>
+              <th z-table-head scope="col">Mark</th>
+              <th z-table-head scope="col">Serial / Reg.</th>
+              <th z-table-head scope="col">Owner</th>
+              <th z-table-head scope="col">Classes</th>
+              <th z-table-head scope="col">Status</th>
+              <th z-table-head scope="col">Filed</th>
+            </tr>
+          </thead>
+          <tbody z-table-body>
+            @for (t of page.content; track t.serialNumber) {
+              <tr z-table-row>
+                <td z-table-cell class="max-w-64 whitespace-normal">
+                  <a [routerLink]="['/trademarks', t.serialNumber]" class="font-semibold hover:underline">{{ t.markText }}</a>
+                  <div class="text-muted-foreground text-xs">{{ humanize(t.markType) }}</div>
+                </td>
+                <td z-table-cell class="font-mono text-xs">
+                  <a [routerLink]="['/trademarks', t.serialNumber]" class="text-primary hover:underline">{{ t.serialNumber }}</a>
+                  @if (t.registrationNumber) {
+                    <div class="text-muted-foreground">Reg. {{ t.registrationNumber }}</div>
+                  }
+                </td>
+                <td z-table-cell class="max-w-56 truncate">{{ t.owner ?? '—' }}</td>
+                <td z-table-cell class="tabular text-xs">{{ t.niceClasses.join(', ') || '—' }}</td>
+                <td z-table-cell><app-status-badge [status]="t.status" /></td>
+                <td z-table-cell class="tabular text-muted-foreground text-xs">{{ t.filingDate ? (t.filingDate | date: 'mediumDate') : '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-pager
+        [page]="page.page"
+        [totalPages]="page.totalPages"
+        [size]="page.size"
+        [totalElements]="page.totalElements"
+        ariaLabel="Trademark results pages"
+        (pageChange)="goToPage($event)"
+      />
+    }
+  }
+</div>

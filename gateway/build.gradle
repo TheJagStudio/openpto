@@ -1,0 +1,96 @@
+plugins {
+	id 'java'
+	id 'jacoco'
+	id 'org.springframework.boot' version '4.1.1'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'gov.openpto'
+version = '0.0.1-SNAPSHOT'
+description = 'OpenPTO API gateway (Amazon API Gateway equivalent)'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+ext {
+	set('springCloudVersion', "2025.1.3")
+	set('bucket4jVersion', "8.20.0")
+	set('swaggerUiVersion', "5.32.15")
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-cache'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.cloud:spring-cloud-starter-gateway-server-webmvc'
+	implementation "com.bucket4j:bucket4j_jdk17-core:${bucket4jVersion}"
+	implementation 'com.github.ben-manes.caffeine:caffeine'
+	implementation "org.webjars:swagger-ui:${swaggerUiVersion}"
+	implementation 'org.webjars:webjars-locator-lite'
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+	testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-cache-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
+	testCompileOnly 'org.projectlombok:lombok'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+	}
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+	finalizedBy tasks.named('jacocoTestReport')
+}
+
+jacoco {
+	toolVersion = '0.8.14'
+}
+
+// GatewayApplication.main is only a launcher; everything else counts toward coverage
+def coverageClasses = files(layout.buildDirectory.dir('classes/java/main')).asFileTree.matching {
+	exclude 'gov/openpto/gateway/GatewayApplication.class'
+}
+
+tasks.named('jacocoTestReport') {
+	dependsOn tasks.named('test')
+	classDirectories.setFrom(coverageClasses)
+	reports {
+		xml.required = true
+		html.required = true
+	}
+}
+
+tasks.named('jacocoTestCoverageVerification') {
+	dependsOn tasks.named('test')
+	classDirectories.setFrom(coverageClasses)
+	violationRules {
+		rule {
+			limit {
+				counter = 'LINE'
+				minimum = 0.80
+			}
+		}
+	}
+}
+
+tasks.named('check') {
+	dependsOn tasks.named('jacocoTestCoverageVerification')
+}
